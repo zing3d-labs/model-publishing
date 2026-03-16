@@ -1,0 +1,189 @@
+# OpenGrid Facade Build Configuration
+# Generates all Lite facade sizes from 2x2 to 9x9 (max that fits on a 256mm Bambu P1S plate)
+# 36 variants total
+
+project:
+  name: "openGrid Facade"
+  makerworld_url: "https://makerworld.com/en/models/2429606-opengrid-facade"
+  collection: "opengrid"
+  description: "Flat facade panel with snap connectors for covering openGrid tiles. Features configurable corner refinement, snap placement, and removal notches."
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-NC-SA 4.0"
+
+source:
+  input_file: "../../models/opengrid/parts/opengrid_facade.scad"
+  libraries:
+    - "../../models/external/BOSL2/"
+    - "../../models/external/QuackWorks/"
+
+variants:
+  # Lite grid facades (2x2 through 9x9)
+  lite_2x2:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 2}
+    outputs: [{format: stl, filename: facade_lite_2x2.stl}]
+  lite_2x3:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 3}
+    outputs: [{format: stl, filename: facade_lite_2x3.stl}]
+  lite_2x4:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 4}
+    outputs: [{format: stl, filename: facade_lite_2x4.stl}]
+  lite_2x5:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 5}
+    outputs: [{format: stl, filename: facade_lite_2x5.stl}]
+  lite_2x6:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 6}
+    outputs: [{format: stl, filename: facade_lite_2x6.stl}]
+  lite_2x7:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 7}
+    outputs: [{format: stl, filename: facade_lite_2x7.stl}]
+  lite_2x8:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 8}
+    outputs: [{format: stl, filename: facade_lite_2x8.stl}]
+  lite_2x9:
+    parameters: {Grid_Type: "Lite", Units_X: 2, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_2x9.stl}]
+  lite_3x3:
+    parameters: {Grid_Type: "Lite", Units_X: 3, Units_Y: 3}
+    outputs: [{format: stl, filename: facade_lite_3x3.stl}]
+  lite_3x4:
+    parameters: {Grid_Type: "Lite", Units_X: 3, Units_Y: 4}
+    outputs: [{format: stl, filename: facade_lite_3x4.stl}]
+  lite_3x5:
+    parameters: {Grid_Type: "Lite", Units_X: 3, Units_Y: 5}
+    outputs: [{format: stl, filename: facade_lite_3x5.stl}]
+  lite_3x6:
+    parameters: {Grid_Type: "Lite", Units_X: 3, Units_Y: 6}
+    outputs: [{format: stl, filename: facade_lite_3x6.stl}]
+  lite_3x7:
+    parameters: {Grid_Type: "Lite", Units_X: 3, Units_Y: 7}
+    outputs: [{format: stl, filename: facade_lite_3x7.stl}]
+  lite_3x8:
+    parameters: {Grid_Type: "Lite", Units_X: 3, Units_Y: 8}
+    outputs: [{format: stl, filename: facade_lite_3x8.stl}]
+  lite_3x9:
+    parameters: {Grid_Type: "Lite", Units_X: 3, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_3x9.stl}]
+  lite_4x4:
+    parameters: {Grid_Type: "Lite", Units_X: 4, Units_Y: 4}
+    outputs: [{format: stl, filename: facade_lite_4x4.stl}]
+  lite_4x5:
+    parameters: {Grid_Type: "Lite", Units_X: 4, Units_Y: 5}
+    outputs: [{format: stl, filename: facade_lite_4x5.stl}]
+  lite_4x6:
+    parameters: {Grid_Type: "Lite", Units_X: 4, Units_Y: 6}
+    outputs: [{format: stl, filename: facade_lite_4x6.stl}]
+  lite_4x7:
+    parameters: {Grid_Type: "Lite", Units_X: 4, Units_Y: 7}
+    outputs: [{format: stl, filename: facade_lite_4x7.stl}]
+  lite_4x8:
+    parameters: {Grid_Type: "Lite", Units_X: 4, Units_Y: 8}
+    outputs: [{format: stl, filename: facade_lite_4x8.stl}]
+  lite_4x9:
+    parameters: {Grid_Type: "Lite", Units_X: 4, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_4x9.stl}]
+  lite_5x5:
+    parameters: {Grid_Type: "Lite", Units_X: 5, Units_Y: 5}
+    outputs: [{format: stl, filename: facade_lite_5x5.stl}]
+  lite_5x6:
+    parameters: {Grid_Type: "Lite", Units_X: 5, Units_Y: 6}
+    outputs: [{format: stl, filename: facade_lite_5x6.stl}]
+  lite_5x7:
+    parameters: {Grid_Type: "Lite", Units_X: 5, Units_Y: 7}
+    outputs: [{format: stl, filename: facade_lite_5x7.stl}]
+  lite_5x8:
+    parameters: {Grid_Type: "Lite", Units_X: 5, Units_Y: 8}
+    outputs: [{format: stl, filename: facade_lite_5x8.stl}]
+  lite_5x9:
+    parameters: {Grid_Type: "Lite", Units_X: 5, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_5x9.stl}]
+  lite_6x6:
+    parameters: {Grid_Type: "Lite", Units_X: 6, Units_Y: 6}
+    outputs: [{format: stl, filename: facade_lite_6x6.stl}]
+  lite_6x7:
+    parameters: {Grid_Type: "Lite", Units_X: 6, Units_Y: 7}
+    outputs: [{format: stl, filename: facade_lite_6x7.stl}]
+  lite_6x8:
+    parameters: {Grid_Type: "Lite", Units_X: 6, Units_Y: 8}
+    outputs: [{format: stl, filename: facade_lite_6x8.stl}]
+  lite_6x9:
+    parameters: {Grid_Type: "Lite", Units_X: 6, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_6x9.stl}]
+  lite_7x7:
+    parameters: {Grid_Type: "Lite", Units_X: 7, Units_Y: 7}
+    outputs: [{format: stl, filename: facade_lite_7x7.stl}]
+  lite_7x8:
+    parameters: {Grid_Type: "Lite", Units_X: 7, Units_Y: 8}
+    outputs: [{format: stl, filename: facade_lite_7x8.stl}]
+  lite_7x9:
+    parameters: {Grid_Type: "Lite", Units_X: 7, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_7x9.stl}]
+  lite_8x8:
+    parameters: {Grid_Type: "Lite", Units_X: 8, Units_Y: 8}
+    outputs: [{format: stl, filename: facade_lite_8x8.stl}]
+  lite_8x9:
+    parameters: {Grid_Type: "Lite", Units_X: 8, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_8x9.stl}]
+  lite_9x9:
+    parameters: {Grid_Type: "Lite", Units_X: 9, Units_Y: 9}
+    outputs: [{format: stl, filename: facade_lite_9x9.stl}]
+
+# Image generation settings
+images:
+  defaults:
+    resolution: [1920, 1080]
+    background: "white"
+    colorscheme: "DeepOcean"
+
+  views:
+    - variant: "lite_4x4"
+      shots:
+        - name: "hero"
+          camera:
+            position: [220, -180, 150]
+            look_at: [0, 0, 5]
+          filename: "facade_lite_4x4_hero.png"
+        - name: "snap_detail"
+          camera:
+            position: [180, -60, 25]
+            look_at: [0, 0, 3]
+          filename: "facade_lite_4x4_snap.png"
+
+
+# Modular template system
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "remix"
+      category: "Organizers"
+      tags: "opengrid, facade, panel, cover, modular, grid, organization, parametric, customizer"
+      source_urls:
+        - "https://makerworld.com/en/models/1179191-opengrid-wall-desk-mounting-framework-ecosystem"
+      print_profile:
+        name: "0.2mm layer, 2 walls, 15% infill"
+        settings:
+          - "0.2mm layer height"
+          - "2 walls"
+          - "15% infill"
+          - "No supports required"
+          - "Print flat side down"
+        notes: "The facade is a thin, flat part so it prints quickly and doesn't need high infill or extra walls for strength."
+
+# Build pipeline settings
+build:
+  output_directory: "dist/"
+  clean_before_build: true
+
+  openscad:
+    executable: "openscad"
+    timeout: 300
+    additional_flags: ["--enable=manifold", "--export-format=binstl"]
+
+  render:
+    timeout: 120
+    additional_flags: ["--render"]

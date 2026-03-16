@@ -1,0 +1,170 @@
+# Grid Basket Build Configuration
+
+project:
+  name: "openGrid Basket"
+  collection: "opengrid"
+  description: "Parametric 3D printable modular organization baskets with openGrid compatibility. Features include adjustable sizing, dual-sided mounting snaps, and a modular design that fits standard 28mm grid systems."
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-NC-SA 4.0"
+
+source:
+  input_file: "../../models/opengrid/kits/grid_basket/grid_basket.scad"
+  libraries:
+    - "../../models/external/BOSL2/"
+    - "../../models/external/QuackWorks/"
+
+# Define different basket size variants
+variants:
+  small_3x3x3:
+    name: "Small Basket"
+    description: "Compact 3x3x3 basket for small items like pens, markers, or craft supplies."
+    parameters:
+      Basket_X_Units: 3
+      Basket_Y_Units: 3
+      Basket_Z_Units: 3
+      Orient_for_printing: true
+      Explosion_distance: 5
+    outputs:
+      - format: "stl"
+        filename: "grid_basket_small_3x3x3.stl"
+      - format: "3mf"
+        filename: "grid_basket_small_3x3x3.3mf"
+
+  medium_5x5x5:
+    name: "Medium Basket"
+    description: "Mid-size 5x5x5 basket suitable for tools, electronics, or general organization."
+    parameters:
+      Basket_X_Units: 5
+      Basket_Y_Units: 5
+      Basket_Z_Units: 5
+      Orient_for_printing: true
+      Explosion_distance: 5
+    outputs:
+      - format: "stl"
+        filename: "grid_basket_medium_5x5x5.stl"
+      - format: "3mf"
+        filename: "grid_basket_medium_5x5x5.3mf"
+
+  large_7x7x7:
+    name: "Large Basket"
+    description: "Large 7x7x7 basket for bulkier items or generous workspace storage."
+    parameters:
+      Basket_X_Units: 7
+      Basket_Y_Units: 7
+      Basket_Z_Units: 7
+      Orient_for_printing: true
+      Explosion_distance: 5
+    outputs:
+      - format: "stl"
+        filename: "grid_basket_large_7x7x7.stl"
+      - format: "3mf"
+        filename: "grid_basket_large_7x7x7.3mf"
+
+
+# Image generation settings
+images:
+  defaults:
+    resolution: [1920, 1080]
+    background: "white"
+    colorscheme: "Nature"
+
+  # Applied on top of variant parameters for all image renders
+  parameter_overrides:
+    Orient_for_printing: false
+    Explosion_distance: 0
+
+  views:
+    - variant: "small_3x3x3"
+      shots:
+        - name: "hero"
+          camera:
+            position: [200, 200, 260]
+            look_at: [0, 0, 42]
+          filename: "small_3x3x3_hero.png"
+        - name: "side"
+          camera:
+            position: [-350, 0, 42]
+            look_at: [0, 0, 42]
+          filename: "small_3x3x3_side.png"
+
+    - variant: "medium_5x5x5"
+      shots:
+        - name: "hero"
+          camera:
+            position: [230, 230, 300]
+            look_at: [0, 0, 70]
+          filename: "medium_5x5x5_hero.png"
+        - name: "side"
+          camera:
+            position: [-500, 0, 70]
+            look_at: [0, 0, 70]
+          filename: "medium_5x5x5_side.png"
+
+    - variant: "large_7x7x7"
+      shots:
+        - name: "hero"
+          camera:
+            position: [280, 280, 360]
+            look_at: [0, 0, 98]
+          filename: "large_7x7x7_hero.png"
+        - name: "side"
+          camera:
+            position: [-650, 0, 98]
+            look_at: [0, 0, 98]
+          filename: "large_7x7x7_side.png"
+
+
+# Modular template system
+# Note: Template paths are relative to the templates/ directory at project root
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "remix"  # "original" or "remix"
+      category: "Organizers"
+      tags: "opengrid, modular, basket, storage, organization, 3d-printing, parametric, gridfinity-compatible"
+      source_urls:
+        - "https://makerworld.com/en/models/1179191-opengrid-wall-desk-mounting-framework-ecosystem"
+        - "https://makerworld.com/en/models/1304337-opengrid-tile-generator"
+      print_profile:
+        name: "Standard print settings"
+        settings:
+          - "0.2mm layer height"
+          - "4 walls"
+          - "15% infill (gyroid or grid)"
+          - "No supports needed"
+
+    printables:
+      output_file: "descriptions/printables_description.txt"
+
+# Build pipeline settings
+build:
+  output_directory: "dist/"
+  clean_before_build: true
+
+  openscad:
+    executable: "openscad"
+    timeout: 600 # 10 minutes - baskets can be complex
+    additional_flags: ["--enable=manifold"]
+
+  render:
+    timeout: 300 # 5 minutes per image
+    additional_flags: ["--render"]
+
+# File watching (for future auto-rebuild)
+watch:
+  enabled: false # Not yet implemented
+  paths:
+    - "../../scad_code/kits/grid_basket/grid_basket.scad"
+    - "../../scad_code/parts/"
+  ignore_patterns:
+    - "*.stl"
+    - "*.3mf"
+    - "*.png"
+    - "dist/*"
+  debounce_ms: 1000

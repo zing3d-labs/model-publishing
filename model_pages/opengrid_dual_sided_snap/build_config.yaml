@@ -1,0 +1,257 @@
+# Dual Sided Snap Build Configuration
+# Generates multiple variants of the dual sided snap connector
+
+project:
+  name: "openGrid Dual Sided Snap"
+  makerworld_url: "https://makerworld.com/en/models/2448748-opengrid-dual-sided-snap"
+  collection: "opengrid"
+  description: "Double-sided snap connector for modular grid systems"
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-NC-SA 4.0"
+
+source:
+  input_file: "../../models/opengrid/parts/opengrid_dual_sided_snap.scad"
+  libraries:
+    - "../../models/external/BOSL2/"
+    - "../../models/external/QuackWorks/"
+
+# Define parameter sets that create different model variants
+# All 16 combinations of Lite_A, Directional_A, Lite_B, Directional_B
+variants:
+  a_std_nondir_b_std_nondir:
+    name: "A Standard Nondirectional / B Standard Nondirectional"
+    parameters:
+      Lite_A: false
+      Directional_A: false
+      Lite_B: false
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_std_nondir_b_std_nondir.stl"
+
+  a_std_dir_b_std_nondir:
+    name: "A Standard Directional / B Standard Nondirectional"
+    parameters:
+      Lite_A: false
+      Directional_A: true
+      Lite_B: false
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_std_dir_b_std_nondir.stl"
+
+  a_std_nondir_b_std_dir:
+    name: "A Standard Nondirectional / B Standard Directional"
+    parameters:
+      Lite_A: false
+      Directional_A: false
+      Lite_B: false
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_std_nondir_b_std_dir.stl"
+
+  a_std_dir_b_std_dir:
+    name: "A Standard Directional / B Standard Directional"
+    parameters:
+      Lite_A: false
+      Directional_A: true
+      Lite_B: false
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_std_dir_b_std_dir.stl"
+
+  a_lite_nondir_b_std_nondir:
+    name: "A Lite Nondirectional / B Standard Nondirectional"
+    parameters:
+      Lite_A: true
+      Directional_A: false
+      Lite_B: false
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_lite_nondir_b_std_nondir.stl"
+
+  a_lite_dir_b_std_nondir:
+    name: "A Lite Directional / B Standard Nondirectional"
+    parameters:
+      Lite_A: true
+      Directional_A: true
+      Lite_B: false
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_lite_dir_b_std_nondir.stl"
+
+  a_lite_nondir_b_std_dir:
+    name: "A Lite Nondirectional / B Standard Directional"
+    parameters:
+      Lite_A: true
+      Directional_A: false
+      Lite_B: false
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_lite_nondir_b_std_dir.stl"
+
+  a_lite_dir_b_std_dir:
+    name: "A Lite Directional / B Standard Directional"
+    parameters:
+      Lite_A: true
+      Directional_A: true
+      Lite_B: false
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_lite_dir_b_std_dir.stl"
+
+  a_std_nondir_b_lite_nondir:
+    name: "A Standard Nondirectional / B Lite Nondirectional"
+    parameters:
+      Lite_A: false
+      Directional_A: false
+      Lite_B: true
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_std_nondir_b_lite_nondir.stl"
+
+  a_std_dir_b_lite_nondir:
+    name: "A Standard Directional / B Lite Nondirectional"
+    parameters:
+      Lite_A: false
+      Directional_A: true
+      Lite_B: true
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_std_dir_b_lite_nondir.stl"
+
+  a_std_nondir_b_lite_dir:
+    name: "A Standard Nondirectional / B Lite Directional"
+    parameters:
+      Lite_A: false
+      Directional_A: false
+      Lite_B: true
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_std_nondir_b_lite_dir.stl"
+
+  a_std_dir_b_lite_dir:
+    name: "A Standard Directional / B Lite Directional"
+    parameters:
+      Lite_A: false
+      Directional_A: true
+      Lite_B: true
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_std_dir_b_lite_dir.stl"
+
+  a_lite_nondir_b_lite_nondir:
+    name: "A Lite Nondirectional / B Lite Nondirectional"
+    parameters:
+      Lite_A: true
+      Directional_A: false
+      Lite_B: true
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_lite_nondir_b_lite_nondir.stl"
+
+  a_lite_dir_b_lite_nondir:
+    name: "A Lite Directional / B Lite Nondirectional"
+    parameters:
+      Lite_A: true
+      Directional_A: true
+      Lite_B: true
+      Directional_B: false
+    outputs:
+      - format: "stl"
+        filename: "a_lite_dir_b_lite_nondir.stl"
+
+  a_lite_nondir_b_lite_dir:
+    name: "A Lite Nondirectional / B Lite Directional"
+    parameters:
+      Lite_A: true
+      Directional_A: false
+      Lite_B: true
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_lite_nondir_b_lite_dir.stl"
+
+  a_lite_dir_b_lite_dir:
+    name: "A Lite Directional / B Lite Directional"
+    parameters:
+      Lite_A: true
+      Directional_A: true
+      Lite_B: true
+      Directional_B: true
+    outputs:
+      - format: "stl"
+        filename: "a_lite_dir_b_lite_dir.stl"
+
+# Image generation settings
+images:
+  defaults:
+    resolution: [1920, 1080]
+    background: "white"
+    colorscheme: "Nature"
+
+  views:
+    - variant: "a_std_nondir_b_std_nondir"
+      shots:
+        - name: "hero"
+          camera:
+            position: [60, -60, 50]
+            look_at: [0, 0, 0]
+          filename: "a_std_nondir_b_std_nondir_hero.png"
+
+    - variant: "a_lite_dir_b_lite_dir"
+      shots:
+        - name: "hero"
+          camera:
+            position: [60, -60, 50]
+            look_at: [0, 0, 0]
+          filename: "a_lite_dir_b_lite_dir_hero.png"
+
+# Modular template system
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "remix"
+      category: "Organizers"
+      tags: "opengrid, snap, connector, dual-sided, modular, grid, organization"
+      source_urls:
+        - "https://makerworld.com/en/models/1179191-opengrid-wall-desk-mounting-framework-ecosystem"
+      print_profile:
+        name: "Standard print settings"
+        settings:
+          - "0.2mm layer height"
+          - "3 walls"
+          - "15% infill"
+          - "No supports required"
+          - "Print flat side down"
+
+# Build pipeline settings
+build:
+  output_directory: "dist/"
+  clean_before_build: true
+
+  openscad:
+    executable: "openscad"
+    timeout: 300
+    additional_flags: ["--enable=manifold"]
+
+  render:
+    timeout: 120
+    additional_flags: ["--render"]

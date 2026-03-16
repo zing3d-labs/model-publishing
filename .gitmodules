@@ -1,0 +1,3 @@
+[submodule "models"]
+	path = models
+	url = git@github.com:zing3d-labs/openscad-models.git

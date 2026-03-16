@@ -1,0 +1,190 @@
+# OpenGrid Beam Build Configuration
+# Generates all combinations of Full (6.8mm) and Lite (4mm) thickness
+# with lengths from 2 to 12 units
+
+project:
+  name: "openGrid Beam"
+  makerworld_url: "https://makerworld.com/en/models/2402751-opengrid-beam"
+  collection: "opengrid"
+  description: "Structural beam that combines the openGrid connector with a beam to join tiles at 90-degree angles. Build baskets, shelving, and complex modular structures."
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-NC-SA 4.0"
+
+source:
+  input_file: "../../models/opengrid/parts/opengrid_beam.scad"
+  libraries:
+    - "../../models/external/BOSL2/"
+    - "../../models/external/QuackWorks/"
+
+variants:
+  # Full thickness (6.8mm) variants
+  full_2u:
+    name: "Full 2-Unit Beam"
+    description: "6.8mm thickness, 2 units long"
+    parameters:
+      Units: 2
+      Grid_Version: "Full"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_2u.stl"
+
+  full_3u:
+    name: "Full 3-Unit Beam"
+    description: "6.8mm thickness, 3 units long"
+    parameters:
+      Units: 3
+      Grid_Version: "Full"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_3u.stl"
+
+  full_4u:
+    name: "Full 4-Unit Beam"
+    description: "6.8mm thickness, 4 units long"
+    parameters:
+      Units: 4
+      Grid_Version: "Full"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_4u.stl"
+
+  full_5u:
+    name: "Full 5-Unit Beam"
+    description: "6.8mm thickness, 5 units long"
+    parameters:
+      Units: 5
+      Grid_Version: "Full"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_5u.stl"
+
+  full_6u:
+    name: "Full 6-Unit Beam"
+    description: "6.8mm thickness, 6 units long"
+    parameters:
+      Units: 6
+      Grid_Version: "Full"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_6u.stl"
+
+  full_7u:
+    name: "Full 7-Unit Beam"
+    description: "6.8mm thickness, 7 units long"
+    parameters:
+      Units: 7
+      Grid_Version: "Full"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_7u.stl"
+
+  full_8u:
+    name: "Full 8-Unit Beam"
+    description: "6.8mm thickness, 8 units long"
+    parameters:
+      Units: 8
+      Grid_Version: "Full"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_8u.stl"
+
+  # Lite thickness (4mm) variants
+  lite_2u:
+    name: "Lite 2-Unit Beam"
+    description: "4mm thickness, 2 units long"
+    parameters:
+      Units: 2
+      Grid_Version: "Lite"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_2u.stl"
+
+  lite_3u:
+    name: "Lite 3-Unit Beam"
+    description: "4mm thickness, 3 units long"
+    parameters:
+      Units: 3
+      Grid_Version: "Lite"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_3u.stl"
+
+  lite_4u:
+    name: "Lite 4-Unit Beam"
+    description: "4mm thickness, 4 units long"
+    parameters:
+      Units: 4
+      Grid_Version: "Lite"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_4u.stl"
+
+  lite_5u:
+    name: "Lite 5-Unit Beam"
+    description: "4mm thickness, 5 units long"
+    parameters:
+      Units: 5
+      Grid_Version: "Lite"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_5u.stl"
+
+  lite_6u:
+    name: "Lite 6-Unit Beam"
+    description: "4mm thickness, 6 units long"
+    parameters:
+      Units: 6
+      Grid_Version: "Lite"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_6u.stl"
+
+  lite_7u:
+    name: "Lite 7-Unit Beam"
+    description: "4mm thickness, 7 units long"
+    parameters:
+      Units: 7
+      Grid_Version: "Lite"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_7u.stl"
+
+  lite_8u:
+    name: "Lite 8-Unit Beam"
+    description: "4mm thickness, 8 units long"
+    parameters:
+      Units: 8
+      Grid_Version: "Lite"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_8u.stl"
+
+# Modular template system
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "remix"
+      category: "Organizers"
+      tags: "opengrid, beam, connector, modular, grid, organization, parametric, customizer"
+      source_urls:
+        - "https://makerworld.com/en/models/1179191-opengrid-wall-desk-mounting-framework-ecosystem"
+
+# Build pipeline settings
+build:
+  output_directory: "dist/"
+  clean_before_build: true
+
+  openscad:
+    executable: "openscad"
+    timeout: 300
+    additional_flags: ["--enable=manifold"]
+
+  render:
+    timeout: 120
+    additional_flags: ["--render"]
