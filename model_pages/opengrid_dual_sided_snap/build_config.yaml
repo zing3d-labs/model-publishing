@@ -13,8 +13,8 @@ project:
 source:
   input_file: "../../models/opengrid/parts/opengrid_dual_sided_snap.scad"
   libraries:
-    - "../../models/external/BOSL2/"
-    - "../../models/external/QuackWorks/"
+    - "BOSL2/"
+    - "QuackWorks/"
 
 # Define parameter sets that create different model variants
 # All 16 combinations of Lite_A, Directional_A, Lite_B, Directional_B
@@ -250,7 +250,7 @@ build:
   openscad:
     executable: "openscad"
     timeout: 300
-    additional_flags: ["--enable=manifold"]
+    additional_flags: []
 
   render:
     timeout: 120

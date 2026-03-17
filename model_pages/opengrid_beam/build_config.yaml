@@ -14,8 +14,8 @@ project:
 source:
   input_file: "../../models/opengrid/parts/opengrid_beam.scad"
   libraries:
-    - "../../models/external/BOSL2/"
-    - "../../models/external/QuackWorks/"
+    - "BOSL2/"
+    - "QuackWorks/"
 
 variants:
   # Full thickness (6.8mm) variants
@@ -183,7 +183,7 @@ build:
   openscad:
     executable: "openscad"
     timeout: 300
-    additional_flags: ["--enable=manifold"]
+    additional_flags: []
 
   render:
     timeout: 120

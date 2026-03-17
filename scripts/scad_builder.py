@@ -69,6 +69,28 @@ class SCADBuilder:
         (self.output_dir / 'images').mkdir(exist_ok=True)
         (self.output_dir / 'descriptions').mkdir(exist_ok=True)
 
+    def _openscad_env(self) -> dict:
+        """Return an environment dict for OpenSCAD subprocesses with OPENSCADPATH set
+        from the configured libraries. For each library we add both the library dir itself
+        and its parent, so that:
+          - <BOSL2/std.scad> resolves via the parent dir
+          - <builtins.scad> (used internally by BOSL2 files) resolves via the BOSL2 dir"""
+        seen = []
+        for lib in self.config['source'].get('libraries', []):
+            lib_dir = (self.config_dir / lib).resolve()
+            if not lib_dir.exists():
+                continue
+            parent = str(lib_dir.parent)
+            for p in [parent, str(lib_dir)]:
+                if p not in seen:
+                    seen.append(p)
+        env = os.environ.copy()
+        if seen:
+            existing = env.get('OPENSCADPATH', '')
+            all_paths = seen + ([existing] if existing else [])
+            env['OPENSCADPATH'] = ':'.join(all_paths)
+        return env
+
     def compile_scad(self) -> Path:
         """Compile the main SCAD file using scad-compiler from zing3d-labs/openscad-toolkit"""
         start_time = time.time()
@@ -159,7 +181,8 @@ class SCADBuilder:
                             cmd,
                             capture_output=True,
                             text=True,
-                            timeout=timeout
+                            timeout=timeout,
+                            env=self._openscad_env()
                         )
 
                         file_elapsed = time.time() - file_start_time
@@ -240,7 +263,8 @@ class SCADBuilder:
                         cmd,
                         capture_output=True,
                         text=True,
-                        timeout=timeout
+                        timeout=timeout,
+                        env=self._openscad_env()
                     )
 
                     img_elapsed = time.time() - img_start_time

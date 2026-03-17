@@ -14,8 +14,8 @@ project:
 source:
   input_file: "../../models/opengrid/parts/opengrid_facade.scad"
   libraries:
-    - "../../models/external/BOSL2/"
-    - "../../models/external/QuackWorks/"
+    - "BOSL2/"
+    - "QuackWorks/"
 
 variants:
   # Lite grid facades (2x2 through 9x9)
@@ -182,7 +182,7 @@ build:
   openscad:
     executable: "openscad"
     timeout: 300
-    additional_flags: ["--enable=manifold", "--export-format=binstl"]
+    additional_flags: ["--export-format=binstl"]
 
   render:
     timeout: 120
