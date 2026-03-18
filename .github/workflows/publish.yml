@@ -4,7 +4,7 @@ name: Publish Changed Models
 # increments their version tags, builds descriptions, and uploads as artifacts.
 on:
   push:
-    branches: [main]
+    branches: [main, fix-publish-workflow]
 
 permissions:
   contents: write  # required to push version tags
