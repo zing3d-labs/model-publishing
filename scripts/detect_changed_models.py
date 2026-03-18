@@ -47,7 +47,7 @@ def detect_changed_models(changed_files: list[str]) -> list[str]:
     all_models = get_all_models()
 
     # These paths affect every model's output
-    global_prefixes = ("templates/", "scripts/", "models")
+    global_prefixes = ("templates", "scripts", "models")
 
     for path in changed_files:
         if any(path == prefix or path.startswith(prefix + "/") for prefix in global_prefixes):
