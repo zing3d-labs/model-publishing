@@ -182,7 +182,7 @@ build:
   openscad:
     executable: "openscad"
     timeout: 300
-    additional_flags: ["--export-format=binstl"]
+    additional_flags: []
 
   render:
     timeout: 120
