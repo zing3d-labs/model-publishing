@@ -1,0 +1,141 @@
+name: Publish Changed Models
+
+# Runs when a PR is merged to main. Detects which model configs changed,
+# increments their version tags, builds descriptions, and uploads as artifacts.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write  # required to push version tags
+
+jobs:
+  # ── 1. Figure out which models need rebuilding ─────────────────────────────
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      models: ${{ steps.detect.outputs.models }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # need HEAD^ for the diff
+
+      - name: Detect changed model configs
+        id: detect
+        run: echo "models=$(python scripts/detect_changed_models.py)" >> "$GITHUB_OUTPUT"
+
+      - name: Show detected models
+        run: echo "Models to rebuild -> ${{ steps.detect.outputs.models }}"
+
+  # ── 2. Build descriptions + tag the commit ─────────────────────────────────
+  build-descriptions:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.models != '[]'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ${{ fromJson(needs.detect-changes.outputs.models) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history so we can inspect all existing tags
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install jinja2 pyyaml
+
+      # ── Determine the next version for this model ──────────────────────────
+      # Tag format: <model>/v<major>.<minor>.<patch>
+      # If no tags exist yet, the first tag matches the version already in
+      # build_config.yaml (typically 1.0.0). Subsequent runs increment patch.
+      - name: Determine next version
+        id: version
+        run: |
+          MODEL="${{ matrix.model }}"
+          git fetch --tags
+
+          LATEST=$(git tag -l "${MODEL}/v*" | sort -V | tail -1)
+
+          if [ -z "$LATEST" ]; then
+            # First release — use whatever is currently in the config
+            NEXT=$(python - <<'PYEOF'
+          import yaml, sys
+          model = sys.argv[1]
+          with open(f"model_pages/{model}/build_config.yaml") as f:
+              c = yaml.safe_load(f)
+          print(c["project"]["version"])
+          PYEOF
+            python - "$MODEL")
+          else
+            # Increment patch from the latest tag
+            VERSION="${LATEST#${MODEL}/v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+            NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+
+          echo "version=${NEXT}"   >> "$GITHUB_OUTPUT"
+          echo "tag=${MODEL}/v${NEXT}" >> "$GITHUB_OUTPUT"
+
+      # ── Inject the new version into the config before building ─────────────
+      # The builder reads project.version from the YAML and passes it to
+      # templates, so we patch it in-place in the CI workspace (not committed).
+      - name: Inject version into build config
+        run: |
+          python - "${{ matrix.model }}" "${{ steps.version.outputs.version }}" << 'PYEOF'
+          import re, sys
+          model, version = sys.argv[1], sys.argv[2]
+          path = f"model_pages/{model}/build_config.yaml"
+          with open(path) as f:
+              content = f.read()
+          # Replace:  version: "x.y.z"
+          content = re.sub(
+              r'(?m)^(\s+version:\s+")[^"]*(")',
+              rf'\g<1>{version}\2',
+              content,
+          )
+          with open(path, "w") as f:
+              f.write(content)
+          print(f"Patched {path} → version {version}")
+          PYEOF
+
+      # ── Build descriptions only (no STL / image rendering in CI yet) ───────
+      - name: Build descriptions
+        run: python scripts/scad_builder.py "model_pages/${{ matrix.model }}/build_config.yaml" -d
+
+      # ── Resolve the output path (project name may differ from dir name) ────
+      - name: Resolve descriptions output path
+        id: outdir
+        run: |
+          OUTDIR=$(python - "${{ matrix.model }}" << 'PYEOF'
+          import sys, yaml
+          model = sys.argv[1]
+          with open(f"model_pages/{model}/build_config.yaml") as f:
+              c = yaml.safe_load(f)
+          name = c["project"]["name"].lower().replace(" ", "_")
+          print(f"dist/{name}/descriptions")
+          PYEOF
+          python - "${{ matrix.model }}")
+          echo "path=${OUTDIR}" >> "$GITHUB_OUTPUT"
+
+      # ── Upload descriptions as a named artifact ────────────────────────────
+      - name: Upload descriptions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: descriptions--${{ matrix.model }}--v${{ steps.version.outputs.version }}
+          path: ${{ steps.outdir.outputs.path }}/
+          if-no-files-found: error
+
+      # ── Tag the merge commit ───────────────────────────────────────────────
+      - name: Tag merge commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.tag }}" "${{ github.sha }}"
+          git push origin "${{ steps.version.outputs.tag }}"
