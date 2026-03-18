@@ -4,7 +4,7 @@ name: Publish Changed Models
 # increments their version tags, builds descriptions, and uploads as artifacts.
 on:
   push:
-    branches: [main]
+    branches: [main, fix-publish-workflow]
 
 permissions:
   contents: write  # required to push version tags
@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # need HEAD^ for the diff
+          fetch-depth: 0  # need full history to find merge-base with origin/main
 
       - name: Detect changed model configs
         id: detect
@@ -58,52 +58,16 @@ jobs:
       - name: Determine next version
         id: version
         run: |
-          MODEL="${{ matrix.model }}"
           git fetch --tags
-
-          LATEST=$(git tag -l "${MODEL}/v*" | sort -V | tail -1)
-
-          if [ -z "$LATEST" ]; then
-            # First release — use whatever is currently in the config
-            NEXT=$(python - <<'PYEOF'
-          import yaml, sys
-          model = sys.argv[1]
-          with open(f"model_pages/{model}/build_config.yaml") as f:
-              c = yaml.safe_load(f)
-          print(c["project"]["version"])
-          PYEOF
-            python - "$MODEL")
-          else
-            # Increment patch from the latest tag
-            VERSION="${LATEST#${MODEL}/v}"
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-            NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
-          fi
-
-          echo "version=${NEXT}"   >> "$GITHUB_OUTPUT"
-          echo "tag=${MODEL}/v${NEXT}" >> "$GITHUB_OUTPUT"
+          NEXT=$(python scripts/ci_next_version.py "${{ matrix.model }}")
+          echo "version=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ matrix.model }}/v${NEXT}" >> "$GITHUB_OUTPUT"
 
       # ── Inject the new version into the config before building ─────────────
       # The builder reads project.version from the YAML and passes it to
       # templates, so we patch it in-place in the CI workspace (not committed).
       - name: Inject version into build config
-        run: |
-          python - "${{ matrix.model }}" "${{ steps.version.outputs.version }}" << 'PYEOF'
-          import re, sys
-          model, version = sys.argv[1], sys.argv[2]
-          path = f"model_pages/{model}/build_config.yaml"
-          with open(path) as f:
-              content = f.read()
-          # Replace:  version: "x.y.z"
-          content = re.sub(
-              r'(?m)^(\s+version:\s+")[^"]*(")',
-              rf'\g<1>{version}\2',
-              content,
-          )
-          with open(path, "w") as f:
-              f.write(content)
-          print(f"Patched {path} → version {version}")
-          PYEOF
+        run: python scripts/ci_patch_version.py "${{ matrix.model }}" "${{ steps.version.outputs.version }}"
 
       # ── Build descriptions only (no STL / image rendering in CI yet) ───────
       - name: Build descriptions
@@ -112,17 +76,7 @@ jobs:
       # ── Resolve the output path (project name may differ from dir name) ────
       - name: Resolve descriptions output path
         id: outdir
-        run: |
-          OUTDIR=$(python - "${{ matrix.model }}" << 'PYEOF'
-          import sys, yaml
-          model = sys.argv[1]
-          with open(f"model_pages/{model}/build_config.yaml") as f:
-              c = yaml.safe_load(f)
-          name = c["project"]["name"].lower().replace(" ", "_")
-          print(f"dist/{name}/descriptions")
-          PYEOF
-          python - "${{ matrix.model }}")
-          echo "path=${OUTDIR}" >> "$GITHUB_OUTPUT"
+        run: echo "path=$(python scripts/ci_output_dir.py '${{ matrix.model }}')" >> "$GITHUB_OUTPUT"
 
       # ── Upload descriptions as a named artifact ────────────────────────────
       - name: Upload descriptions artifact

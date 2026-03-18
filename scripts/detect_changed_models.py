@@ -19,8 +19,14 @@ from pathlib import Path
 
 
 def get_changed_files() -> list[str]:
+    base = subprocess.run(
+        ["git", "merge-base", "origin/main", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD^", "HEAD"],
+        ["git", "diff", "--name-only", base, "HEAD"],
         capture_output=True,
         text=True,
         check=True,
@@ -41,7 +47,7 @@ def detect_changed_models(changed_files: list[str]) -> list[str]:
     all_models = get_all_models()
 
     # These paths affect every model's output
-    global_prefixes = ("templates/", "scripts/", "models")
+    global_prefixes = ("templates", "scripts", "models")
 
     for path in changed_files:
         if any(path == prefix or path.startswith(prefix + "/") for prefix in global_prefixes):
