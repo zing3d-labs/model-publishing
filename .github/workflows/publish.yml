@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # need HEAD^ for the diff
+          fetch-depth: 0  # need full history to find merge-base with origin/main
 
       - name: Detect changed model configs
         id: detect

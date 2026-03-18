@@ -19,8 +19,14 @@ from pathlib import Path
 
 
 def get_changed_files() -> list[str]:
+    base = subprocess.run(
+        ["git", "merge-base", "origin/main", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD^", "HEAD"],
+        ["git", "diff", "--name-only", base, "HEAD"],
         capture_output=True,
         text=True,
         check=True,
