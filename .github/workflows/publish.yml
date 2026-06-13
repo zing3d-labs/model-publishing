@@ -4,7 +4,7 @@ name: Publish Changed Models
 # increments their version tags, builds descriptions, and uploads as artifacts.
 on:
   push:
-    branches: [main, fix-publish-workflow]
+    branches: [main]
 
 permissions:
   contents: write  # required to push version tags
@@ -22,7 +22,7 @@ jobs:
 
       - name: Detect changed model configs
         id: detect
-        run: echo "models=$(python scripts/detect_changed_models.py)" >> "$GITHUB_OUTPUT"
+        run: echo "models=$(python scripts/detect_changed_models.py '${{ github.event.before }}')" >> "$GITHUB_OUTPUT"
 
       - name: Show detected models
         run: echo "Models to rebuild -> ${{ steps.detect.outputs.models }}"

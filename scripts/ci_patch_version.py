@@ -18,13 +18,13 @@ def main() -> None:
         content = f.read()
 
     # Replace:  version: "x.y.z"
-    patched = re.sub(
+    patched, count = re.subn(
         r'(?m)^(\s+version:\s+")[^"]*(")',
         lambda m: m.group(1) + version + m.group(2),
         content,
     )
 
-    if patched == content:
+    if count == 0:
         print(f"WARNING: version field not found in {path}", file=sys.stderr)
         sys.exit(1)
 
