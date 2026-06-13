@@ -2,7 +2,8 @@
 """
 Detect which model configs need to be rebuilt based on changed files.
 
-Compares HEAD^ to HEAD and maps changed paths to affected model directories.
+Accepts an optional positional argument: the "before" SHA to diff against HEAD.
+When not provided, falls back to the merge-base with origin/main (useful locally).
 Outputs a JSON array suitable for use as a GitHub Actions matrix input.
 
 Rules:
@@ -18,9 +19,18 @@ import sys
 from pathlib import Path
 
 
-def get_changed_files() -> list[str]:
+def get_changed_files(before_sha: str | None) -> list[str]:
+    if before_sha:
+        base = before_sha
+    else:
+        base = subprocess.run(
+            ["git", "merge-base", "origin/main", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD^", "HEAD"],
+        ["git", "diff", "--name-only", base, "HEAD"],
         capture_output=True,
         text=True,
         check=True,
@@ -41,7 +51,7 @@ def detect_changed_models(changed_files: list[str]) -> list[str]:
     all_models = get_all_models()
 
     # These paths affect every model's output
-    global_prefixes = ("templates/", "scripts/", "models")
+    global_prefixes = ("templates", "scripts", "models")
 
     for path in changed_files:
         if any(path == prefix or path.startswith(prefix + "/") for prefix in global_prefixes):
@@ -60,10 +70,11 @@ def detect_changed_models(changed_files: list[str]) -> list[str]:
 
 
 def main() -> None:
+    before_sha = sys.argv[1] if len(sys.argv) > 1 else None
     try:
-        changed_files = get_changed_files()
-    except subprocess.CalledProcessError as exc:
-        # On the very first commit there is no HEAD^ — treat as all models changed
+        changed_files = get_changed_files(before_sha)
+    except subprocess.CalledProcessError:
+        # No usable base commit (e.g. first push) — treat as all models changed
         print(json.dumps(get_all_models()))
         return
 
