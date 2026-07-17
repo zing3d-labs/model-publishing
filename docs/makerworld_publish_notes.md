@@ -103,26 +103,23 @@ the real openGrid Beam geometry change live.
   text — see "MakerWorld comment automation" section below for details.
 
 **Loose ends / next steps, in order:**
-1. Three throwaway print profiles are sitting on the test fixture from this
-   session's rehearsals (`3437877` original + `3442701`, `3442721` from
-   testing `new-profile`) -- harmless (Private, disposable model) but worth
-   deleting for tidiness next time you're on MakerWorld, no rush. The
-   comment-script rehearsal also left 4 throwaway comments/replies on the
-   test fixture's one comment thread — same story, low priority.
+1. Test fixture has accumulated throwaway junk from rehearsals (3 print
+   profiles, 4 comments/replies) — deliberately left alone, Private and
+   disposable, not worth the cleanup trip. Ignore.
 2. The `--scad` delete+reupload path in the `update` subcommand is written
    but not yet tested against the new connection approach. Worth a test run
    against `_test_fixture --scad` before using it on beam (241 existing Customize
    uses at last check — see "Not tested" note further down about existing
    customizations).
 3. Basket (model `2505078`) needs the script extended for multiple print
-   profiles before it can be used there — not started.
+   profiles before it can be used there — not started. This is also what's
+   blocking the actual basket corner-piece geometry/profile update itself
+   (the original ask that started this whole thread) — MakerWorld/Reddit
+   comments already posted saying the beam is updated and basket will
+   follow eventually, but the basket work itself hasn't started.
 
-**Uncommitted changes right now** (nothing committed yet, all in working
-tree): `model_pages/{grid_basket,opengrid_beam,opengrid_dual_sided_snap,opengrid_facade}/build_config.yaml`,
-new `model_pages/opengrid_beam_lite/`, `scripts/scad_builder.py`,
-`templates/base_template.md`, `templates/makerworld_base.md`, new `docs/`,
-new `model_pages/_test_fixture/`, new `scripts/makerworld_update.py`. The
-`models` submodule also shows as dirty (`external/QuackWorks` bump) — that
+**Everything from this session is committed** (`dfe66c1` and earlier). The
+`models` submodule still shows as dirty (`external/QuackWorks` bump) — that
 was already there at the start of this session, unrelated to this work.
 
 ## openGrid Beam: Full/Lite split into two print profiles
