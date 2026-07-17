@@ -35,3 +35,7 @@
 
 {{sections.support_project}}
 {% endif %}
+{% if sections.changelog is defined and sections.changelog %}
+
+{{sections.changelog}}
+{% endif %}

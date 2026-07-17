@@ -326,10 +326,12 @@ class SCADBuilder:
                 'makerworld': [
                     'model_description', 'intro', 'print_settings', 'downloads',
                     'assembly', 'collection', 'support_project', 'related_models',
+                    'changelog',
                 ],
                 'printables': [
                     'model_description', 'intro', 'print_settings', 'downloads',
                     'assembly', 'attribution', 'collection', 'support_project', 'related_models',
+                    'changelog',
                 ],
             }
             section_names = canonical_sections.get(site_name, [])

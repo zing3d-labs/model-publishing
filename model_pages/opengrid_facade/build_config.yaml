@@ -5,6 +5,7 @@
 project:
   name: "openGrid Facade"
   makerworld_url: "https://makerworld.com/en/models/2429606-opengrid-facade"
+  makerworld_profile_id: 2665104
   collection: "opengrid"
   description: "Flat facade panel with snap connectors for covering openGrid tiles. Features configurable corner refinement, snap placement, and removal notches."
   version: "1.0.0"

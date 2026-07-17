@@ -4,6 +4,7 @@
 project:
   name: "openGrid Dual Sided Snap"
   makerworld_url: "https://makerworld.com/en/models/2448748-opengrid-dual-sided-snap"
+  makerworld_profile_id: 2688055
   collection: "opengrid"
   description: "Double-sided snap connector for modular grid systems"
   version: "1.0.0"

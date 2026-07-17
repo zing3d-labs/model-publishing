@@ -2,6 +2,13 @@
 
 project:
   name: "openGrid Basket"
+  makerworld_url: "https://makerworld.com/en/models/2505078-opengrid-basket"
+  # NOTE: basket has 3 print profiles (small/medium/large), unlike the other
+  # opengrid models which have exactly 1. This is the profile for the first
+  # variant (small); scripts/makerworld_update.py currently only supports a
+  # single profile per model, so basket needs manual handling until that's
+  # extended to loop over multiple profiles.
+  makerworld_profile_id: 2754279
   collection: "opengrid"
   description: "Parametric 3D printable modular organization baskets with openGrid compatibility. Features include adjustable sizing, dual-sided mounting snaps, and a modular design that fits standard 28mm grid systems."
   version: "1.0.0"

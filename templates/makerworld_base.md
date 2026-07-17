@@ -57,6 +57,10 @@
 {{sections.related_models}}
 
 {% endif %}
+{% if sections.changelog is defined and sections.changelog %}
+{{sections.changelog}}
+
+{% endif %}
 {% if site.print_profile is defined and site.print_profile %}
 === PRINT PROFILE NAME ===
 {{site.print_profile.name}}
