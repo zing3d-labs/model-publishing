@@ -93,11 +93,22 @@ the real openGrid Beam geometry change live.
     does -- check the live listing before assuming a re-run is needed.
     Deliberately does not attempt to click through the challenge itself.
 
+- **`scripts/makerworld_comments.py` written AND validated against the test
+  fixture** (`list-comments`, `feed`, `reply`, `resolve` all confirmed live;
+  `create-issue` reviewed but deliberately not live-tested — it's a thin
+  `gh issue create` wrapper with no DOM risk, and Jonathan chose not to spam
+  the real `zing3d-labs/openscad-models` repo just to rehearse it). Found
+  and fixed four real bugs in the process, all root-caused via
+  chrome-devtools MCP against the live page rather than guessed from error
+  text — see "MakerWorld comment automation" section below for details.
+
 **Loose ends / next steps, in order:**
 1. Three throwaway print profiles are sitting on the test fixture from this
    session's rehearsals (`3437877` original + `3442701`, `3442721` from
    testing `new-profile`) -- harmless (Private, disposable model) but worth
-   deleting for tidiness next time you're on MakerWorld, no rush.
+   deleting for tidiness next time you're on MakerWorld, no rush. The
+   comment-script rehearsal also left 4 throwaway comments/replies on the
+   test fixture's one comment thread — same story, low priority.
 2. The `--scad` delete+reupload path in the `update` subcommand is written
    but not yet tested against the new connection approach. Worth a test run
    against `_test_fixture --scad` before using it on beam (241 existing Customize
@@ -199,6 +210,62 @@ only UI via chrome-devtools MCP.
   is the `#profileId-XXXXX` fragment on that link. See
   `find_new_profile_id()` in the script, and the name-collision gotcha
   logged in STATUS above (don't match by profile name).
+
+## MakerWorld comment automation (scripts/makerworld_comments.py)
+
+`list-comments`, `feed`, `reply`, and `resolve` were rehearsed against the
+test fixture's one throwaway comment before any of this touched a real
+model thread. Four real bugs found, all root-caused by reading the live DOM
+via chrome-devtools MCP's `evaluate_script`/`take_snapshot` rather than by
+guessing from Playwright's error text:
+
+- **Comment timestamps render as relative text for anything recent** ("32
+  seconds ago", "13 minutes ago") and only switch to the absolute
+  `YYYY-MM-DD HH:MM` format once enough time has passed. A regex that only
+  matched the absolute form silently found zero comments for anything
+  posted in the current session — `list-comments` on a page with a real,
+  visible comment returned `[]` with no error. Fixed by matching both forms
+  (see `TS_RE` in `EXTRACT_COMMENTS_JS`).
+- **The per-comment threaded "Reply" control is a different UI element from
+  the top-level page composer.** The top-level composer's placeholder reads
+  "Please fill in your opinion"; clicking *that* when you meant to reply to
+  a specific comment fails with Playwright reporting the real
+  `contenteditable="true"` div "intercepts pointer events" on the
+  placeholder span. Fixed by locating the actual editable div via
+  `reply_control.locator('xpath=following::*[@contenteditable="true"][1]')`
+  instead of text-matching a placeholder.
+- **`page.goto()` to a URL that only differs by query string does not
+  remount MakerWorld's React app**, so state from a previous run/failed
+  attempt in the same browser tab — e.g. a reply composer left open because
+  an earlier step threw — is still open on the next invocation. This broke
+  `find_comment_reply_control`'s `text()="Reply"` match entirely (zero
+  matches, 30s timeout) because the toggle already read "Cancel the reply".
+  Fixed by matching either state and only clicking to open when it's
+  currently closed — see `find_comment_reply_control()`.
+- **`page.keyboard.type()` sends to whatever currently has OS-level focus
+  with no re-check**, and dispatching it immediately after
+  `composer.click()` silently dropped every keystroke here — the composer
+  stayed at `(0/1000)` chars and its submit button stayed disabled, with no
+  error raised (the script just hung waiting for a submit button that could
+  never become enabled). Confirmed by comparing against a manual
+  chrome-devtools MCP click+type on the same element, which worked
+  immediately. Fixed by using the locator-scoped `composer.type(reply_text)`
+  instead (re-focuses right before typing), the same pattern already used
+  for the rich-text description editor in `update_print_profile()` — plus
+  an explicit `page.wait_for_timeout(1000)` after typing, before hitting
+  submit, per the same "let React's state settle" lesson learned there.
+- **The threaded reply composer's submit button is labeled "Reply", not
+  "Post"** — "Post" is the top-level page composer's button only, and it
+  stays permanently disabled since that composer is empty. Looking up
+  `get_by_role('button', name='Post')` page-wide found that unrelated,
+  always-disabled button and hung waiting for it to become enabled. Fixed
+  by scoping the lookup to the reply composer's own `<form>` ancestor and
+  matching "Reply" instead.
+
+`create-issue` (a `subprocess.run(['gh', 'issue', 'create', ...])` wrapper,
+no browser involved) was reviewed but not live-tested — low DOM/selector
+risk, and Jonathan chose not to create a throwaway issue on the real
+`zing3d-labs/openscad-models` repo just to rehearse it.
 
 ## Browser connection: what actually works
 
