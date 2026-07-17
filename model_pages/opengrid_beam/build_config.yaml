@@ -1,10 +1,13 @@
-# OpenGrid Beam Build Configuration
-# Generates all combinations of Full (6.8mm) and Lite (4mm) thickness
-# with lengths from 2 to 12 units
+# OpenGrid Beam Build Configuration -- Full (6.8mm) thickness only.
+# Lengths 2-8 units, Flush/1-Extended/2-Extended corner styles (21 variants,
+# under Bambu Studio's 36-plate-per-3mf limit). Lite thickness is a separate
+# print profile -- see ../opengrid_beam_lite/build_config.yaml -- because
+# combining both would exceed the plate limit (42 variants total).
 
 project:
   name: "openGrid Beam"
   makerworld_url: "https://makerworld.com/en/models/2402751-opengrid-beam"
+  makerworld_profile_id: 2633738
   collection: "opengrid"
   description: "Structural beam that combines the openGrid connector with a beam to join tiles at 90-degree angles. Build baskets, shelving, and complex modular structures."
   version: "1.0.0"
@@ -18,13 +21,15 @@ source:
     - "QuackWorks/"
 
 variants:
-  # Full thickness (6.8mm) variants
+  # Full thickness (6.8mm) variants -- both corners Flush (original look)
   full_2u:
     name: "Full 2-Unit Beam"
     description: "6.8mm thickness, 2 units long"
     parameters:
       Units: 2
       Grid_Version: "Full"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
         filename: "beam_full_2u.stl"
@@ -35,6 +40,8 @@ variants:
     parameters:
       Units: 3
       Grid_Version: "Full"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
         filename: "beam_full_3u.stl"
@@ -45,6 +52,8 @@ variants:
     parameters:
       Units: 4
       Grid_Version: "Full"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
         filename: "beam_full_4u.stl"
@@ -55,6 +64,8 @@ variants:
     parameters:
       Units: 5
       Grid_Version: "Full"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
         filename: "beam_full_5u.stl"
@@ -65,6 +76,8 @@ variants:
     parameters:
       Units: 6
       Grid_Version: "Full"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
         filename: "beam_full_6u.stl"
@@ -75,6 +88,8 @@ variants:
     parameters:
       Units: 7
       Grid_Version: "Full"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
         filename: "beam_full_7u.stl"
@@ -85,80 +100,182 @@ variants:
     parameters:
       Units: 8
       Grid_Version: "Full"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
         filename: "beam_full_8u.stl"
 
-  # Lite thickness (4mm) variants
-  lite_2u:
-    name: "Lite 2-Unit Beam"
-    description: "4mm thickness, 2 units long"
+  # Full thickness (6.8mm) variants -- one extended corner end
+  full_2u_1ext:
+    name: "Full 2-Unit Beam (1 Extended End)"
+    description: "6.8mm thickness, 2 units long, one extended corner end for basket assembly"
     parameters:
       Units: 2
-      Grid_Version: "Lite"
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
-        filename: "beam_lite_2u.stl"
+        filename: "beam_full_2u_1ext.stl"
 
-  lite_3u:
-    name: "Lite 3-Unit Beam"
-    description: "4mm thickness, 3 units long"
+  full_3u_1ext:
+    name: "Full 3-Unit Beam (1 Extended End)"
+    description: "6.8mm thickness, 3 units long, one extended corner end for basket assembly"
     parameters:
       Units: 3
-      Grid_Version: "Lite"
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
-        filename: "beam_lite_3u.stl"
+        filename: "beam_full_3u_1ext.stl"
 
-  lite_4u:
-    name: "Lite 4-Unit Beam"
-    description: "4mm thickness, 4 units long"
+  full_4u_1ext:
+    name: "Full 4-Unit Beam (1 Extended End)"
+    description: "6.8mm thickness, 4 units long, one extended corner end for basket assembly"
     parameters:
       Units: 4
-      Grid_Version: "Lite"
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
-        filename: "beam_lite_4u.stl"
+        filename: "beam_full_4u_1ext.stl"
 
-  lite_5u:
-    name: "Lite 5-Unit Beam"
-    description: "4mm thickness, 5 units long"
+  full_5u_1ext:
+    name: "Full 5-Unit Beam (1 Extended End)"
+    description: "6.8mm thickness, 5 units long, one extended corner end for basket assembly"
     parameters:
       Units: 5
-      Grid_Version: "Lite"
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
-        filename: "beam_lite_5u.stl"
+        filename: "beam_full_5u_1ext.stl"
 
-  lite_6u:
-    name: "Lite 6-Unit Beam"
-    description: "4mm thickness, 6 units long"
+  full_6u_1ext:
+    name: "Full 6-Unit Beam (1 Extended End)"
+    description: "6.8mm thickness, 6 units long, one extended corner end for basket assembly"
     parameters:
       Units: 6
-      Grid_Version: "Lite"
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
-        filename: "beam_lite_6u.stl"
+        filename: "beam_full_6u_1ext.stl"
 
-  lite_7u:
-    name: "Lite 7-Unit Beam"
-    description: "4mm thickness, 7 units long"
+  full_7u_1ext:
+    name: "Full 7-Unit Beam (1 Extended End)"
+    description: "6.8mm thickness, 7 units long, one extended corner end for basket assembly"
     parameters:
       Units: 7
-      Grid_Version: "Lite"
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
-        filename: "beam_lite_7u.stl"
+        filename: "beam_full_7u_1ext.stl"
 
-  lite_8u:
-    name: "Lite 8-Unit Beam"
-    description: "4mm thickness, 8 units long"
+  full_8u_1ext:
+    name: "Full 8-Unit Beam (1 Extended End)"
+    description: "6.8mm thickness, 8 units long, one extended corner end for basket assembly"
     parameters:
       Units: 8
-      Grid_Version: "Lite"
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
     outputs:
       - format: "stl"
-        filename: "beam_lite_8u.stl"
+        filename: "beam_full_8u_1ext.stl"
+
+  # Full thickness (6.8mm) variants -- both ends extended
+  full_2u_2ext:
+    name: "Full 2-Unit Beam (2 Extended Ends)"
+    description: "6.8mm thickness, 2 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 2
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_2u_2ext.stl"
+
+  full_3u_2ext:
+    name: "Full 3-Unit Beam (2 Extended Ends)"
+    description: "6.8mm thickness, 3 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 3
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_3u_2ext.stl"
+
+  full_4u_2ext:
+    name: "Full 4-Unit Beam (2 Extended Ends)"
+    description: "6.8mm thickness, 4 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 4
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_4u_2ext.stl"
+
+  full_5u_2ext:
+    name: "Full 5-Unit Beam (2 Extended Ends)"
+    description: "6.8mm thickness, 5 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 5
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_5u_2ext.stl"
+
+  full_6u_2ext:
+    name: "Full 6-Unit Beam (2 Extended Ends)"
+    description: "6.8mm thickness, 6 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 6
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_6u_2ext.stl"
+
+  full_7u_2ext:
+    name: "Full 7-Unit Beam (2 Extended Ends)"
+    description: "6.8mm thickness, 7 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 7
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_7u_2ext.stl"
+
+  full_8u_2ext:
+    name: "Full 8-Unit Beam (2 Extended Ends)"
+    description: "6.8mm thickness, 8 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 8
+      Grid_Version: "Full"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_full_8u_2ext.stl"
+
 
 # Modular template system
 templates:
