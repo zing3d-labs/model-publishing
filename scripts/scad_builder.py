@@ -102,7 +102,7 @@ class SCADBuilder:
         # Build compile command using uvx with latest release
         cmd = [
             'uvx',
-            '--from', 'git+https://github.com/zing3d-labs/openscad-toolkit@v0.14.0',
+            '--from', 'git+https://github.com/zing3d-labs/openscad-toolkit@v0.16.0',
             'scad-compiler',
             str(source_file),
             '-o', str(compiled_file)
