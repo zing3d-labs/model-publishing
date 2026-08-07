@@ -39,10 +39,10 @@ Before running:
    around it.
 
 Usage:
-    python3 scripts/makerworld_update.py update opengrid_beam --notify-message "..."
-    python3 scripts/makerworld_update.py update opengrid_beam --no-notify
-    python3 scripts/makerworld_update.py update opengrid_beam --no-notify --scad
-    python3 scripts/makerworld_update.py new-profile opengrid_beam_lite \\
+    python3 scripts/makerworld_update.py update opengrid_beam/full --notify-message "..."
+    python3 scripts/makerworld_update.py update opengrid_beam/full --no-notify
+    python3 scripts/makerworld_update.py update opengrid_beam/full --no-notify --scad
+    python3 scripts/makerworld_update.py new-profile opengrid_beam/lite \\
         --photo model_pages/opengrid_beam/images/opengrid_beam_wide_view.jpg \\
         --name "Lite Print Settings" --description "..."
 """
@@ -53,7 +53,7 @@ import sys
 import time
 from pathlib import Path
 
-import yaml
+from model_config import load_merged_config, project_slug
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -70,12 +70,11 @@ class UpdateError(Exception):
     pass
 
 
-def load_project_config(model_dir: Path, require_profile_id: bool = True) -> dict:
+def load_project_config(model_dir: Path, root_dir: Path, require_profile_id: bool = True) -> dict:
     config_path = model_dir / 'build_config.yaml'
     if not config_path.exists():
         raise UpdateError(f"No build_config.yaml found at {config_path}")
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
+    config, _ = load_merged_config(config_path)
 
     project = config.get('project', {})
     if require_profile_id and 'makerworld_profile_id' not in project:
@@ -89,7 +88,11 @@ def load_project_config(model_dir: Path, require_profile_id: bool = True) -> dic
     if 'input_file' not in source:
         raise UpdateError(f"{config_path} is missing source.input_file")
 
-    project_name = project['name'].lower().replace(' ', '_')
+    # Used to locate dist/<slug>/ -- derived from the config's own location
+    # under model_pages/, not project.name, since project.name is shared
+    # identically across every profile of a multi-profile model and would
+    # collide (see scripts/model_config.py).
+    project_name = project_slug(config_path, root_dir)
     source_stem = Path(source['input_file']).stem
 
     return {
@@ -97,6 +100,13 @@ def load_project_config(model_dir: Path, require_profile_id: bool = True) -> dic
         'source_stem': source_stem,
         'profile_id': project.get('makerworld_profile_id'),
         'model_url': project.get('makerworld_url'),
+        # The verifying-queue page shows the real MakerWorld model name, which
+        # can differ from our own project_name (e.g. multiple print profiles
+        # -- small/medium/large -- sharing one underlying MakerWorld model
+        # named just "openGrid Basket"). Falls back to project.name for
+        # configs where they happen to match (e.g. opengrid_beam's Full
+        # profile).
+        'verify_name': project.get('makerworld_model_name', project.get('name', project_name.replace('_', ' '))),
     }
 
 
@@ -400,14 +410,14 @@ def run_update(args, root_dir: Path):
         print(f"No such model: {model_dir}", file=sys.stderr)
         sys.exit(1)
 
-    cfg = load_project_config(model_dir)
+    cfg = load_project_config(model_dir, root_dir)
     files = resolve_dist_files(root_dir, cfg['project_name'], cfg['source_stem'], need_scad=args.scad)
 
     p, page = connect_chrome(args.chrome_user_data_dir)
     try:
         try:
             update_print_profile(page, cfg['profile_id'], files['mf3_path'], notify_message)
-            poll_verification(page, args.username, cfg['project_name'].replace('_', ' '))
+            poll_verification(page, args.username, cfg['verify_name'])
 
             if args.scad:
                 if not cfg['model_url']:
@@ -417,7 +427,7 @@ def run_update(args, root_dir: Path):
                     )
                 model_id = model_id_from_url(cfg['model_url'])
                 update_raw_model_file(page, model_id, files['scad_path'], notify_message)
-                poll_verification(page, args.username, cfg['project_name'].replace('_', ' '))
+                poll_verification(page, args.username, cfg['verify_name'])
         except Exception:
             debug_path = root_dir / 'dist' / 'makerworld_update_debug.png'
             page.screenshot(path=str(debug_path))
@@ -436,7 +446,7 @@ def run_new_profile(args, root_dir: Path):
         print(f"No such model: {model_dir}", file=sys.stderr)
         sys.exit(1)
 
-    cfg = load_project_config(model_dir, require_profile_id=False)
+    cfg = load_project_config(model_dir, root_dir, require_profile_id=False)
     if not cfg['model_url']:
         raise UpdateError(
             f"model_pages/{args.model}/build_config.yaml is missing project.makerworld_url "
@@ -457,22 +467,26 @@ def run_new_profile(args, root_dir: Path):
                 page, model_id, files['mf3_path'], photo_paths,
                 args.name, args.description, args.private,
             )
-            # Match on the profile name we explicitly set, NOT
-            # cfg['project_name'] -- confirmed broken in practice for
-            # opengrid_beam_lite: project_name is "opengrid beam lite" (our
-            # own file-naming convention to distinguish the Lite build
-            # config) but the real MakerWorld model is just "OpenGrid Beam"
-            # (same underlying model as the Full profile), so that search
-            # string would never appear in the verifying-queue page at all.
-            # If --name wasn't given, MakerWorld's own auto-fill applies and
-            # we can't predict it, so fall back to project_name and warn.
+            # Match on the profile name we explicitly set, NOT cfg['verify_name']
+            # -- confirmed broken in practice for opengrid_beam_lite:
+            # project_name is "opengrid beam lite" (our own file-naming
+            # convention to distinguish the Lite build config) but the real
+            # MakerWorld model is just "OpenGrid Beam" (same underlying model
+            # as the Full profile). cfg['verify_name'] (from
+            # project.makerworld_model_name, or project_name as a fallback)
+            # fixes exactly this case when set correctly in the config, but
+            # --name is still the most reliable match since it's the literal
+            # text MakerWorld will render. If --name wasn't given, MakerWorld's
+            # own auto-fill applies and we can't predict it, so fall back to
+            # cfg['verify_name'] and warn.
             if args.name:
                 verify_name = args.name
             else:
-                verify_name = cfg['project_name'].replace('_', ' ')
+                verify_name = cfg['verify_name']
                 logger.warning(
-                    "No --name given -- falling back to the project name to match the "
-                    "verification queue, which may not be what MakerWorld auto-fills."
+                    "No --name given -- falling back to project.makerworld_model_name "
+                    "(or project name) to match the verification queue, which may not "
+                    "be what MakerWorld auto-fills."
                 )
             poll_verification(page, args.username, verify_name)
 
@@ -512,7 +526,7 @@ def main():
     update_parser = subparsers.add_parser(
         'update', help="Replace the .3mf on an existing print profile (optionally the raw .scad too)"
     )
-    update_parser.add_argument('model', help="Model directory name under model_pages/ (e.g. opengrid_beam)")
+    update_parser.add_argument('model', help="Model/profile directory under model_pages/ (e.g. opengrid_facade, or opengrid_beam/full for a multi-profile model)")
     notify_group = update_parser.add_mutually_exclusive_group(required=True)
     notify_group.add_argument(
         '--notify-message', metavar='TEXT',
@@ -527,7 +541,7 @@ def main():
     new_profile_parser = subparsers.add_parser(
         'new-profile', help="First-time publish of a new print profile onto an existing model"
     )
-    new_profile_parser.add_argument('model', help="Model directory name under model_pages/ (e.g. opengrid_beam_lite)")
+    new_profile_parser.add_argument('model', help="Model/profile directory under model_pages/ (e.g. opengrid_beam/lite)")
     new_profile_parser.add_argument(
         '--photo', action='append', required=True, metavar='PATH',
         help="Real print photo for Print Profile Pictures (repeatable, at least one required)"

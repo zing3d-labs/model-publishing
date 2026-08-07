@@ -1,0 +1,67 @@
+# Grid Basket -- Large (7x7x7) print profile.
+# Model-level config (project identity, source, templates) lives in
+# ../model.yaml, shared with small/ and medium/.
+#
+# This is the size affected by GH issue #10 (missing connector holes) --
+# fixed upstream in openscad-models PR #11, pulled in via the models
+# submodule bump. Ship this alongside the corner-cap update and mention both
+# fixes together in the MakerWorld changelog/comment.
+#
+# makerworld_profile_id is not yet known -- add it here once the real
+# large-size profile id is looked up from the live MakerWorld listing
+# (https://makerworld.com/en/models/2505078-opengrid-basket edit page).
+# Until then this config can build/render locally but NOT be published via
+# scripts/makerworld_update.py (it requires the profile id).
+
+variants:
+  large_7x7x7:
+    name: "Large Basket"
+    description: "Large 7x7x7 basket for bulkier items or generous workspace storage."
+    parameters:
+      Basket_X_Units: 7
+      Basket_Y_Units: 7
+      Basket_Z_Units: 7
+      Orient_for_printing: true
+      Explosion_distance: 5
+      # Pinned explicitly to the .scad file's own current defaults so a
+      # future default change upstream can't silently alter what ships --
+      # same reasoning as opengrid_beam's Corner_1/Corner_2 pinning. Only one
+      # of the 3 axes should be "Extended" (see the comment in
+      # grid_basket.scad) since all 3 beams meet at each corner.
+      Beam_Corners_X: "Extended"
+      Beam_Corners_Y: "Flush"
+      Beam_Corners_Z: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "grid_basket_large_7x7x7.stl"
+      - format: "3mf"
+        filename: "grid_basket_large_7x7x7.3mf"
+
+# project:
+#   makerworld_profile_id: TODO -- see note above
+
+# Image generation settings
+images:
+  defaults:
+    resolution: [1920, 1080]
+    background: "white"
+    colorscheme: "Nature"
+
+  # Applied on top of variant parameters for all image renders
+  parameter_overrides:
+    Orient_for_printing: false
+    Explosion_distance: 0
+
+  views:
+    - variant: "large_7x7x7"
+      shots:
+        - name: "hero"
+          camera:
+            position: [280, 280, 360]
+            look_at: [0, 0, 98]
+          filename: "large_7x7x7_hero.png"
+        - name: "side"
+          camera:
+            position: [-650, 0, 98]
+            look_at: [0, 0, 98]
+          filename: "large_7x7x7_side.png"

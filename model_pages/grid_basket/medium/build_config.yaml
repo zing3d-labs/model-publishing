@@ -1,0 +1,62 @@
+# Grid Basket -- Medium (5x5x5) print profile.
+# Model-level config (project identity, source, templates) lives in
+# ../model.yaml, shared with small/ and large/.
+#
+# makerworld_profile_id is not yet known -- add it here once the real
+# medium-size profile id is looked up from the live MakerWorld listing
+# (https://makerworld.com/en/models/2505078-opengrid-basket edit page).
+# Until then this config can build/render locally but NOT be published via
+# scripts/makerworld_update.py (it requires the profile id).
+
+variants:
+  medium_5x5x5:
+    name: "Medium Basket"
+    description: "Mid-size 5x5x5 basket suitable for tools, electronics, or general organization."
+    parameters:
+      Basket_X_Units: 5
+      Basket_Y_Units: 5
+      Basket_Z_Units: 5
+      Orient_for_printing: true
+      Explosion_distance: 5
+      # Pinned explicitly to the .scad file's own current defaults so a
+      # future default change upstream can't silently alter what ships --
+      # same reasoning as opengrid_beam's Corner_1/Corner_2 pinning. Only one
+      # of the 3 axes should be "Extended" (see the comment in
+      # grid_basket.scad) since all 3 beams meet at each corner.
+      Beam_Corners_X: "Extended"
+      Beam_Corners_Y: "Flush"
+      Beam_Corners_Z: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "grid_basket_medium_5x5x5.stl"
+      - format: "3mf"
+        filename: "grid_basket_medium_5x5x5.3mf"
+
+# project:
+#   makerworld_profile_id: TODO -- see note above
+
+# Image generation settings
+images:
+  defaults:
+    resolution: [1920, 1080]
+    background: "white"
+    colorscheme: "Nature"
+
+  # Applied on top of variant parameters for all image renders
+  parameter_overrides:
+    Orient_for_printing: false
+    Explosion_distance: 0
+
+  views:
+    - variant: "medium_5x5x5"
+      shots:
+        - name: "hero"
+          camera:
+            position: [230, 230, 300]
+            look_at: [0, 0, 70]
+          filename: "medium_5x5x5_hero.png"
+        - name: "side"
+          camera:
+            position: [-500, 0, 70]
+            look_at: [0, 0, 70]
+          filename: "medium_5x5x5_side.png"
