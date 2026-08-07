@@ -1,6 +1,9 @@
 # MakerWorld publish/update process notes
 
-## STATUS (resume here) — as of 2026-07-16 night
+## STATUS (resume here) — as of 2026-08-07
+
+(Previous status was 2026-07-16 night; the multi-profile work described in loose end #3 has
+since been built. See "Update 2026-08-07" at the end of this section.)
 
 **Goal:** script a repeatable MakerWorld update process, then use it to push
 the real openGrid Beam geometry change live.
@@ -111,16 +114,48 @@ the real openGrid Beam geometry change live.
    against `_test_fixture --scad` before using it on beam (241 existing Customize
    uses at last check — see "Not tested" note further down about existing
    customizations).
-3. Basket (model `2505078`) needs the script extended for multiple print
-   profiles before it can be used there — not started. This is also what's
-   blocking the actual basket corner-piece geometry/profile update itself
-   (the original ask that started this whole thread) — MakerWorld/Reddit
-   comments already posted saying the beam is updated and basket will
-   follow eventually, but the basket work itself hasn't started.
+3. ~~Basket (model `2505078`) needs the script extended for multiple print
+   profiles before it can be used there — not started.~~ **The pipeline
+   extension is now built and verified — see "Update 2026-08-07" below.**
+   What still blocks the basket update is narrower than this item implied:
+   only the medium/large `makerworld_profile_id`s are missing. MakerWorld/Reddit
+   comments already posted saying the beam is updated and basket will follow.
 
-**Everything from this session is committed** (`dfe66c1` and earlier). The
+**Everything from that session is committed** (`dfe66c1` and earlier). The
 `models` submodule still shows as dirty (`external/QuackWorks` bump) — that
-was already there at the start of this session, unrelated to this work.
+was already there at the start of that session, unrelated to this work.
+
+### Update 2026-08-07 — multi-profile pipeline built and verified
+
+Loose end #3 was written as "not started", but the work had in fact been started and was
+sitting **uncommitted** in the `model-publishing` primary clone, on a stale reused branch
+(`update-models-submodule`, whose remote had been deleted after PRs #4/#5 merged). It has
+been committed and moved to its own worktree/branch.
+
+**Built:**
+- `scripts/model_config.py` — merges a model-level `model.yaml` into each profile's
+  `build_config.yaml` (profile wins on collision), plus `project_slug()` so each profile gets
+  its own `dist/` directory. Without that, profiles collide: every profile of a model shares
+  the same `project.name`.
+- `grid_basket` split into `small`/`medium`/`large`; `opengrid_beam` into `full`/`lite`. The
+  old `model_pages/opengrid_beam_lite/` is folded into `opengrid_beam/lite/`, with shared
+  images and sections de-duplicated up to the model level.
+- **Backward compatible on purpose**: a model with no `model.yaml` loads flat, exactly as
+  before. Single-profile models (`opengrid_facade`, `opengrid_dual_sided_snap`,
+  `_test_fixture`) are deliberately *not* migrated. Don't "finish the migration" — there
+  isn't one.
+
+**Verified** (2026-08-07): `scad_builder.py <config> -d` run against all 7 configs — the 5
+multi-profile ones and the 2 flat ones — all report success. Seven distinct `dist/`
+directories, no collisions. `grid_basket_small`'s generated MakerWorld description renders all
+three of Small/Medium/Large from `model.yaml`'s `profiles:` list. Caveat: `-d` skips OpenSCAD,
+so **image rendering is still unexercised** — a full build has not been run.
+
+**Still open:** `grid_basket/medium` and `grid_basket/large` have no `makerworld_profile_id`
+(placeholder comments in each config), so they build and render locally but cannot be
+published. `small` = `2754279` is set. Either look the ids up on the live listing or publish
+them via `makerworld_update.py new-profile`. That is the only remaining blocker on the basket
+update itself.
 
 ## openGrid Beam: Full/Lite split into two print profiles
 
