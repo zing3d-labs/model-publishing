@@ -19,7 +19,8 @@ the real openGrid Beam geometry change live.
   `model_pages/opengrid_beam/sections/changelog.md` now has a real entry.
 - `makerworld_profile_id` added to all real model configs (beam=2633738,
   facade=2665104, snap=2688055, basket=2754279 — basket has 3 profiles total,
-  only the first is captured; see note in its config).
+  only the first is captured; see note in its config). *(All three basket ids
+  are now captured — see "Update 2026-08-08" below.)*
 - **`scripts/makerworld_update.py` written AND validated end-to-end**, both
   against the test fixture and for a real, live update: `opengrid_beam`'s
   Standard/Full print profile (`2633738`) was updated for real with 21 new
@@ -115,11 +116,12 @@ the real openGrid Beam geometry change live.
    uses at last check — see "Not tested" note further down about existing
    customizations).
 3. ~~Basket (model `2505078`) needs the script extended for multiple print
-   profiles before it can be used there — not started.~~ **The pipeline
-   extension is now built and verified — see "Update 2026-08-07" below.**
-   What still blocks the basket update is narrower than this item implied:
-   only the medium/large `makerworld_profile_id`s are missing. MakerWorld/Reddit
-   comments already posted saying the beam is updated and basket will follow.
+   profiles before it can be used there — not started.~~ **Done.** The pipeline
+   extension is built and verified (see "Update 2026-08-07" below), and all three
+   profile ids are now recorded (see "Update 2026-08-08" below), so all three
+   basket profiles are publishable via `makerworld_update.py update`.
+   MakerWorld/Reddit comments already posted saying the beam is updated and
+   basket will follow — the basket geometry update itself is still to be pushed.
 
 **Everything from that session is committed** (`dfe66c1` and earlier). The
 `models` submodule still shows as dirty (`external/QuackWorks` bump) — that
@@ -155,7 +157,35 @@ so **image rendering is still unexercised** — a full build has not been run.
 (placeholder comments in each config), so they build and render locally but cannot be
 published. `small` = `2754279` is set. Either look the ids up on the live listing or publish
 them via `makerworld_update.py new-profile`. That is the only remaining blocker on the basket
-update itself.
+update itself. — **Resolved 2026-08-08, see below.**
+
+### Update 2026-08-08 — basket profile ids recorded, no publish needed
+
+All three basket print profiles **already existed live** on model `2505078`; nothing had to be
+published. `new-profile` was never run, and shouldn't be for these — the existing profiles have
+real print photos, download counts and Customize history that a fresh profile would not.
+Recorded in the configs:
+
+| profile dir | live profile name | `makerworld_profile_id` |
+| --- | --- | --- |
+| `grid_basket/small` | 3x3x3 Bast | `2754279` (already set) |
+| `grid_basket/medium` | 5x5x5 Basket | `2758823` |
+| `grid_basket/large` | 7x7x7 Basket | `2758832` |
+
+Ids read off the live listing's per-profile URL fragment
+(`.../2505078-opengrid-basket#profileId-XXXXXXX`) — the same `#profileId-` fragment
+`load_project_config`'s error message points at. Verified by loading all three configs through
+`makerworld_update.load_project_config()`: each resolves its own `profile_id`, its own
+`dist/grid_basket_{small,medium,large}` slug, and the shared `verify_name` "openGrid Basket".
+
+Note the live profile names are `NxNxN`-style, not the `Small/Medium/Large Basket` names used
+in `model.yaml`'s `profiles:` list and the variant names — ours are description copy, MakerWorld's
+are the actual profile titles. That mismatch is expected and is exactly why `poll_verification`
+matches on `makerworld_model_name` rather than `project.name`.
+
+Pushing the basket geometry update is now unblocked: `makerworld_update.py update
+grid_basket/<profile>` for each of the three, once a full (non-`-d`) build has produced the
+`.3mf`s. Image rendering is still unexercised — see the caveat above.
 
 ### Update 2026-08-09 — prebuilt models (no SCAD source)
 

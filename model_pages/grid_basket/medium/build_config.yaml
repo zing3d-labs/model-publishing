@@ -1,12 +1,6 @@
 # Grid Basket -- Medium (5x5x5) print profile.
 # Model-level config (project identity, source, templates) lives in
 # ../model.yaml, shared with small/ and large/.
-#
-# makerworld_profile_id is not yet known -- add it here once the real
-# medium-size profile id is looked up from the live MakerWorld listing
-# (https://makerworld.com/en/models/2505078-opengrid-basket edit page).
-# Until then this config can build/render locally but NOT be published via
-# scripts/makerworld_update.py (it requires the profile id).
 
 variants:
   medium_5x5x5:
@@ -32,8 +26,9 @@ variants:
       - format: "3mf"
         filename: "grid_basket_medium_5x5x5.3mf"
 
-# project:
-#   makerworld_profile_id: TODO -- see note above
+project:
+  # Live profile "5x5x5 Basket" on model 2505078.
+  makerworld_profile_id: 2758823
 
 # Image generation settings
 images:
