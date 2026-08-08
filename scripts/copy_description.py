@@ -20,6 +20,8 @@ from pathlib import Path
 
 import yaml
 
+from model_config import project_slug
+
 try:
     import markdown
 except ImportError:
@@ -54,9 +56,9 @@ def main():
     output_file = sites[args.site]["output_file"]
 
     # Resolve output path the same way scad_builder.py does:
-    # root_dir / build.output_directory / project_name / output_file
+    # root_dir / build.output_directory / project_slug / output_file
     root_dir = Path(__file__).parent.parent
-    project_name = config["project"]["name"].lower().replace(" ", "_")
+    project_name = project_slug(config_path, root_dir)
     output_dir = config.get("build", {}).get("output_directory", "dist/")
     dist_path = root_dir / output_dir / project_name / output_file
 

@@ -10,7 +10,6 @@ This script orchestrates the complete build process for OpenSCAD projects:
 """
 
 import os
-import yaml
 import subprocess
 import shutil
 import time
@@ -18,6 +17,8 @@ from pathlib import Path
 from typing import Dict, List, Any
 import argparse
 import logging
+
+from model_config import load_merged_config, project_slug
 
 # Setup logging
 logging.basicConfig(
@@ -33,18 +34,17 @@ class SCADBuilder:
     def __init__(self, config_path: str):
         self.config_path = Path(config_path)
         self.config_dir = self.config_path.parent
-        self.config = self.load_config()
-        # Get the root directory (where scripts/ is located)
-        root_dir = Path(__file__).parent.parent
-        project_name = self.config['project']['name'].lower().replace(' ', '_')
-        self.output_dir = root_dir / self.config['build']['output_directory'] / project_name
+        self.root_dir = Path(__file__).parent.parent
+        self.config, self.model_dir = self.load_config()
+        project_name = project_slug(self.config_path, self.root_dir)
+        self.output_dir = self.root_dir / self.config['build']['output_directory'] / project_name
 
-    def load_config(self) -> Dict[str, Any]:
-        """Load and validate the build configuration"""
+    def load_config(self) -> tuple[Dict[str, Any], Path | None]:
+        """Load and validate the build configuration, merging in a parent
+        model.yaml for multi-profile models (see model_config.py)."""
         logger.info(f"Loading configuration from {self.config_path}")
 
-        with open(self.config_path, 'r') as f:
-            config = yaml.safe_load(f)
+        config, model_dir = load_merged_config(self.config_path)
 
         # Validate required fields
         required_fields = ['project', 'source', 'variants', 'build']
@@ -52,7 +52,7 @@ class SCADBuilder:
             if field not in config:
                 raise ValueError(f"Missing required config field: {field}")
 
-        return config
+        return config, model_dir
 
     def setup_output_directories(self, clean=True):
         """Create output directory structure"""
@@ -301,8 +301,11 @@ class SCADBuilder:
             logger.error(f"Template directory not found: {template_dir}")
             return
 
+        loader_dirs = [str(template_dir), str(self.config_dir)]
+        if self.model_dir:
+            loader_dirs.append(str(self.model_dir))
         env = Environment(
-            loader=FileSystemLoader([str(template_dir), str(self.config_dir)]),
+            loader=FileSystemLoader(loader_dirs),
             autoescape=select_autoescape(['html', 'xml']),
             trim_blocks=True,
             lstrip_blocks=True
@@ -317,19 +320,22 @@ class SCADBuilder:
 
             # Canonical section list per site — all sections are optional.
             # Resolution order for each section:
-            #   1. config_dir/sections/{name}.md          (model-specific override)
-            #   2. sections/collections/{collection}/{name}.md  (collection default, if project.collection set)
-            #   3. templates/sections/{site}/{name}.md    (site default)
-            #   4. templates/sections/shared/{name}.md    (shared default)
+            #   1. config_dir/sections/{name}.md          (profile-specific override)
+            #   2. model_dir/sections/{name}.md           (model-level override, multi-profile models only)
+            #   3. sections/collections/{collection}/{name}.md  (collection default, if project.collection set)
+            #   4. templates/sections/{site}/{name}.md    (site default)
+            #   5. templates/sections/shared/{name}.md    (shared default)
             # Sections with no file found anywhere are silently skipped.
             canonical_sections = {
                 'makerworld': [
-                    'model_description', 'intro', 'print_settings', 'downloads',
+                    'model_description', 'intro', 'variants', 'print_settings', 'downloads',
                     'assembly', 'collection', 'support_project', 'related_models',
+                    'changelog',
                 ],
                 'printables': [
-                    'model_description', 'intro', 'print_settings', 'downloads',
+                    'model_description', 'intro', 'variants', 'print_settings', 'downloads',
                     'assembly', 'attribution', 'collection', 'support_project', 'related_models',
+                    'changelog',
                 ],
             }
             section_names = canonical_sections.get(site_name, [])
@@ -341,6 +347,11 @@ class SCADBuilder:
                     (self.config_dir / "sections" / f"{section_name}.md",
                      f"sections/{section_name}.md"),
                 ]
+                if self.model_dir:
+                    search_paths.append((
+                        self.model_dir / "sections" / f"{section_name}.md",
+                        f"sections/{section_name}.md",
+                    ))
                 if collection:
                     search_paths.append((
                         template_dir / "sections" / "collections" / collection / f"{section_name}.md",
@@ -363,6 +374,7 @@ class SCADBuilder:
                 rendered = template.render(
                     project=self.config['project'],
                     variants=self.config['variants'],
+                    profiles=self.config.get('profiles', []),
                     site=site_meta
                 )
                 sections[section_name] = rendered

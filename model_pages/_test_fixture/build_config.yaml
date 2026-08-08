@@ -1,0 +1,56 @@
+# Test Fixture Build Configuration
+#
+# Disposable model used only to rehearse the MakerWorld publish/update
+# automation (browser-driven upload flows). Not a real product — do not
+# use as a template for real models, and do not link it from any real
+# model's related_models section.
+
+project:
+  name: "Test Fixture"
+  makerworld_url: "https://makerworld.com/en/models/3055595-automation-test-fixture-private"
+  makerworld_profile_id: 3437877
+  description: "Disposable parametric box used to test the MakerWorld publish/update automation. Not a real model."
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-NC-SA 4.0"
+
+source:
+  input_file: "test_fixture.scad"
+  libraries: []
+
+variants:
+  default:
+    name: "Default Box"
+    description: "40x25x20mm test box"
+    parameters:
+      Width: 40
+      Depth: 25
+      Height: 20
+    outputs:
+      - format: "stl"
+        filename: "test_fixture.stl"
+
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "remix"
+      category: "Organizers"
+      tags: "test"
+
+build:
+  output_directory: "dist/"
+  clean_before_build: true
+
+  openscad:
+    executable: "openscad"
+    timeout: 60
+    additional_flags: []
+
+  render:
+    timeout: 60
+    additional_flags: ["--render"]

@@ -1,13 +1,9 @@
-## Available Variants
+{% if profiles %}
+## Available Print Profiles
 
-{% for variant in variants.values() %}
-### {{variant.name}}
-{{variant.description}}
-
-**Files:**
-
-{% for output in variant.outputs %}
-- {{output.filename}}
-{% endfor %}
+{% for profile in profiles %}
+### {{profile.name}}
+{{profile.description}}
 
 {% endfor %}
+{% endif %}

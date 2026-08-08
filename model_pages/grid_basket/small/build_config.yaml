@@ -1,0 +1,56 @@
+# Grid Basket -- Small (3x3x3) print profile.
+# Model-level config (project identity, source, templates) lives in
+# ../model.yaml, shared with medium/ and large/.
+
+variants:
+  small_3x3x3:
+    name: "Small Basket"
+    description: "Compact 3x3x3 basket for small items like pens, markers, or craft supplies."
+    parameters:
+      Basket_X_Units: 3
+      Basket_Y_Units: 3
+      Basket_Z_Units: 3
+      Orient_for_printing: true
+      Explosion_distance: 5
+      # Pinned explicitly to the .scad file's own current defaults so a
+      # future default change upstream can't silently alter what ships --
+      # same reasoning as opengrid_beam's Corner_1/Corner_2 pinning. Only one
+      # of the 3 axes should be "Extended" (see the comment in
+      # grid_basket.scad) since all 3 beams meet at each corner.
+      Beam_Corners_X: "Extended"
+      Beam_Corners_Y: "Flush"
+      Beam_Corners_Z: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "grid_basket_small_3x3x3.stl"
+      - format: "3mf"
+        filename: "grid_basket_small_3x3x3.3mf"
+
+project:
+  makerworld_profile_id: 2754279
+
+# Image generation settings
+images:
+  defaults:
+    resolution: [1920, 1080]
+    background: "white"
+    colorscheme: "Nature"
+
+  # Applied on top of variant parameters for all image renders
+  parameter_overrides:
+    Orient_for_printing: false
+    Explosion_distance: 0
+
+  views:
+    - variant: "small_3x3x3"
+      shots:
+        - name: "hero"
+          camera:
+            position: [200, 200, 260]
+            look_at: [0, 0, 42]
+          filename: "small_3x3x3_hero.png"
+        - name: "side"
+          camera:
+            position: [-350, 0, 42]
+            look_at: [0, 0, 42]
+          filename: "small_3x3x3_side.png"

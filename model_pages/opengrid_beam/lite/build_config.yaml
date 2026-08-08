@@ -1,0 +1,267 @@
+# OpenGrid Beam -- Lite (4mm) thickness print profile.
+# Lengths 2-8 units, Flush/1-Extended/2-Extended corner styles (21 variants).
+# Same underlying model/page as ../full/ (see ../model.yaml) but a SEPARATE
+# print profile -- Bambu Studio's 36-plate-per-3mf limit meant Full+Lite
+# together (42 variants) couldn't ship as one profile.
+#
+# makerworld_profile_id 3442733 ("Lite Print Settings") published 2026-07-16
+# via `scripts/makerworld_update.py new-profile opengrid_beam/lite`.
+
+project:
+  makerworld_profile_id: 3442733
+
+variants:
+  # Lite thickness (4mm) variants -- both corners Flush (original look)
+  lite_2u:
+    name: "Lite 2-Unit Beam"
+    description: "4mm thickness, 2 units long"
+    parameters:
+      Units: 2
+      Grid_Version: "Lite"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_2u.stl"
+
+  lite_3u:
+    name: "Lite 3-Unit Beam"
+    description: "4mm thickness, 3 units long"
+    parameters:
+      Units: 3
+      Grid_Version: "Lite"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_3u.stl"
+
+  lite_4u:
+    name: "Lite 4-Unit Beam"
+    description: "4mm thickness, 4 units long"
+    parameters:
+      Units: 4
+      Grid_Version: "Lite"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_4u.stl"
+
+  lite_5u:
+    name: "Lite 5-Unit Beam"
+    description: "4mm thickness, 5 units long"
+    parameters:
+      Units: 5
+      Grid_Version: "Lite"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_5u.stl"
+
+  lite_6u:
+    name: "Lite 6-Unit Beam"
+    description: "4mm thickness, 6 units long"
+    parameters:
+      Units: 6
+      Grid_Version: "Lite"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_6u.stl"
+
+  lite_7u:
+    name: "Lite 7-Unit Beam"
+    description: "4mm thickness, 7 units long"
+    parameters:
+      Units: 7
+      Grid_Version: "Lite"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_7u.stl"
+
+  lite_8u:
+    name: "Lite 8-Unit Beam"
+    description: "4mm thickness, 8 units long"
+    parameters:
+      Units: 8
+      Grid_Version: "Lite"
+      Corner_1: "Flush"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_8u.stl"
+
+  # Lite thickness (4mm) variants -- one extended corner end
+  lite_2u_1ext:
+    name: "Lite 2-Unit Beam (1 Extended End)"
+    description: "4mm thickness, 2 units long, one extended corner end for basket assembly"
+    parameters:
+      Units: 2
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_2u_1ext.stl"
+
+  lite_3u_1ext:
+    name: "Lite 3-Unit Beam (1 Extended End)"
+    description: "4mm thickness, 3 units long, one extended corner end for basket assembly"
+    parameters:
+      Units: 3
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_3u_1ext.stl"
+
+  lite_4u_1ext:
+    name: "Lite 4-Unit Beam (1 Extended End)"
+    description: "4mm thickness, 4 units long, one extended corner end for basket assembly"
+    parameters:
+      Units: 4
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_4u_1ext.stl"
+
+  lite_5u_1ext:
+    name: "Lite 5-Unit Beam (1 Extended End)"
+    description: "4mm thickness, 5 units long, one extended corner end for basket assembly"
+    parameters:
+      Units: 5
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_5u_1ext.stl"
+
+  lite_6u_1ext:
+    name: "Lite 6-Unit Beam (1 Extended End)"
+    description: "4mm thickness, 6 units long, one extended corner end for basket assembly"
+    parameters:
+      Units: 6
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_6u_1ext.stl"
+
+  lite_7u_1ext:
+    name: "Lite 7-Unit Beam (1 Extended End)"
+    description: "4mm thickness, 7 units long, one extended corner end for basket assembly"
+    parameters:
+      Units: 7
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_7u_1ext.stl"
+
+  lite_8u_1ext:
+    name: "Lite 8-Unit Beam (1 Extended End)"
+    description: "4mm thickness, 8 units long, one extended corner end for basket assembly"
+    parameters:
+      Units: 8
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Flush"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_8u_1ext.stl"
+
+  # Lite thickness (4mm) variants -- both ends extended
+  lite_2u_2ext:
+    name: "Lite 2-Unit Beam (2 Extended Ends)"
+    description: "4mm thickness, 2 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 2
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_2u_2ext.stl"
+
+  lite_3u_2ext:
+    name: "Lite 3-Unit Beam (2 Extended Ends)"
+    description: "4mm thickness, 3 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 3
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_3u_2ext.stl"
+
+  lite_4u_2ext:
+    name: "Lite 4-Unit Beam (2 Extended Ends)"
+    description: "4mm thickness, 4 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 4
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_4u_2ext.stl"
+
+  lite_5u_2ext:
+    name: "Lite 5-Unit Beam (2 Extended Ends)"
+    description: "4mm thickness, 5 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 5
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_5u_2ext.stl"
+
+  lite_6u_2ext:
+    name: "Lite 6-Unit Beam (2 Extended Ends)"
+    description: "4mm thickness, 6 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 6
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_6u_2ext.stl"
+
+  lite_7u_2ext:
+    name: "Lite 7-Unit Beam (2 Extended Ends)"
+    description: "4mm thickness, 7 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 7
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_7u_2ext.stl"
+
+  lite_8u_2ext:
+    name: "Lite 8-Unit Beam (2 Extended Ends)"
+    description: "4mm thickness, 8 units long, both ends extended for basket assembly"
+    parameters:
+      Units: 8
+      Grid_Version: "Lite"
+      Corner_1: "Extended"
+      Corner_2: "Extended"
+    outputs:
+      - format: "stl"
+        filename: "beam_lite_8u_2ext.stl"
