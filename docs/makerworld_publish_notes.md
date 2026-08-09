@@ -157,6 +157,35 @@ published. `small` = `2754279` is set. Either look the ids up on the live listin
 them via `makerworld_update.py new-profile`. That is the only remaining blocker on the basket
 update itself.
 
+### Update 2026-08-09 — prebuilt models (no SCAD source)
+
+Not every model we publish is authored in OpenSCAD. A build config can now declare a
+`prebuilt:` block **instead of** `source:`, meaning "the `.3mf` already exists, there is
+nothing to compile". See "Prebuilt models" below for the shape and the rules.
+
+**Built:**
+- `scripts/model_config.py` — `validate_geometry_source()` (exactly one of `source`/`prebuilt`,
+  enforced on every config load), `is_prebuilt()`, `prebuilt_package_path()`.
+- `scripts/scad_builder.py` — a prebuilt model skips compile, variant export, 3MF packing and
+  image rendering, and generates descriptions, the one output that needs no source model.
+  `variants:` is no longer required for such a config. `-i/--images-only` is a hard error.
+- `scripts/makerworld_update.py` — `resolve_dist_files()` became `resolve_upload_files()` and
+  takes a prebuilt branch that uploads the committed package **straight from `model_pages/`**.
+  Deliberately not copied into `dist/`: that's gitignored and any `clean_before_build` wipes it.
+  `--scad` is refused for a prebuilt model (there is no customizer source to upload).
+
+**Verified** (2026-08-09) against `model_pages/_test_fixture_prebuilt/`, a disposable fixture
+whose package is a copy of `_test_fixture`'s packed output: descriptions generate; the resolved
+upload path is the committed `.3mf` and contains no `dist/` component; `--scad` and
+`--images-only` both refuse. Malformed configs all fail loudly with actionable messages: package
+loose beside the config, package escaping the config dir, package missing, package not a `.3mf`,
+empty `prebuilt` block, both `source` and `prebuilt`, neither. All 7 pre-existing configs still
+build descriptions unchanged.
+
+**Not done:** no prebuilt model has been published to MakerWorld yet — the first real one is the
+ScanSnap openGrid shelf. The upload path itself is shared with normal models from
+`resolve_upload_files()` onward, so only the file-resolution half is new and unexercised live.
+
 ## openGrid Beam: Full/Lite split into two print profiles
 
 The current `models/` submodule HEAD (`4b9e8ae` on `main`) includes beam
@@ -397,6 +426,43 @@ model used to rehearse these flows without touching real listings.
 build artifact from the raw source. When uploading to MakerWorld, rename to
 drop the `_cpl` suffix (copy to `<stem>.scad` before upload) — this is purely
 a publish-time cosmetic choice; the internal build naming stays as-is.
+
+## Prebuilt models (no SCAD source)
+
+Some models aren't authored in OpenSCAD — a CAD export, a hand-assembled plate,
+someone else's geometry we're republishing. Such a config declares `prebuilt:`
+**instead of** `source:`; the two are mutually exclusive and one is required.
+
+```yaml
+prebuilt:
+  package: "package/fujitsu_scansnap_opengrid_sturdy_shelf.3mf"
+```
+
+Rules, all enforced at config load with a specific error message:
+
+- The path is relative to the config's **own** directory — for a multi-profile
+  model that's the profile subdirectory, one level below `model.yaml`, same as
+  every other path in a merged config.
+- It must live in a **subdirectory** of that directory, not loose beside the
+  config. That gives the committed binary one obvious home alongside whatever
+  came with it (CAD export, source STLs), and keeps `model_pages/<model>/` readable.
+- It must be a `.3mf` and it must exist. Nothing builds it — it's committed.
+
+What changes downstream:
+
+- `scad_builder.py` generates **descriptions only**. There's nothing to compile,
+  no variants to export, no packing to do and nothing to render, so it does none
+  of it and says so. `-i/--images-only` is an error, not a silent no-op — real
+  photos go under the model's `images/` directory.
+- `variants:` is not required in the config (a prebuilt package's plates are
+  already fixed).
+- `makerworld_update.py` uploads the committed `.3mf` from `model_pages/`
+  directly. It is **not** copied into `dist/` first: `dist/` is gitignored and
+  `clean_before_build` would wipe it out from under the upload.
+- `--scad` is refused — a prebuilt model has no customizer source, so the
+  "Raw Model Files" upload surface simply doesn't apply to it.
+
+`model_pages/_test_fixture_prebuilt/` is a disposable example of the layout.
 
 ## Photo requirement — real photos only
 

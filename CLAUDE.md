@@ -20,6 +20,10 @@ OpenSCAD source files live in the `models/` submodule ([zing3d-labs/openscad-mod
     `model.yaml` plus one subdirectory per profile:
     - `grid_basket/model.yaml` + `grid_basket/{small,medium,large}/build_config.yaml`
     - `opengrid_beam/model.yaml` + `opengrid_beam/{full,lite}/build_config.yaml`
+
+  Orthogonally, a config declares where its geometry comes from — exactly one of `source:`
+  (compiled from SCAD) or `prebuilt:` (a committed `.3mf`, see below). Either layout can use
+  either one.
 - `scripts/` - Python build automation:
   - `scad_builder.py` - Main build orchestrator
   - `model_config.py` - Config loading shared by the build and publish scripts
@@ -66,6 +70,21 @@ python scripts/copy_description.py model_pages/<model>/build_config.yaml makerwo
 - Paths inside a `model.yaml` resolve from a *profile* subdirectory, one level deeper than the
   file itself
 - `model.yaml`'s `profiles:` list is what lets generated copy describe a model's other profiles
+
+### Prebuilt models (non-SCAD)
+- A model whose `.3mf` already exists (CAD export, hand-assembled plate) declares a `prebuilt:`
+  block **instead of** `source:`. The two are mutually exclusive; one is required
+  ```yaml
+  prebuilt:
+    package: "package/my_model.3mf"   # relative to THIS config's dir; must be in a subdirectory
+  ```
+- The package is **committed under `model_pages/`** and used from there. Never copy it into
+  `dist/` — that's gitignored and `clean_before_build` wipes it
+- Building a prebuilt model generates descriptions only; `variants:` isn't required, and
+  `-i/--images-only` is an error (there's no source to render — use real photos)
+- `makerworld_update.py` uploads the committed package directly; `--scad` is refused
+- See `model_pages/_test_fixture_prebuilt/` for the layout and
+  `docs/makerworld_publish_notes.md` for the full rules
 - Templates use Jinja2, section resolution: model-specific → collection → site-specific → shared
 - Collection templates live in `templates/sections/collections/{collection}/`
 - All openGrid models must have `collection: "opengrid"` in their build config `project:` block

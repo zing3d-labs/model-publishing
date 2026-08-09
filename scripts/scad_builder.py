@@ -18,7 +18,7 @@ from typing import Dict, List, Any
 import argparse
 import logging
 
-from model_config import load_merged_config, project_slug
+from model_config import is_prebuilt, load_merged_config, prebuilt_package_path, project_slug
 
 # Setup logging
 logging.basicConfig(
@@ -36,6 +36,7 @@ class SCADBuilder:
         self.config_dir = self.config_path.parent
         self.root_dir = Path(__file__).parent.parent
         self.config, self.model_dir = self.load_config()
+        self.prebuilt = is_prebuilt(self.config)
         project_name = project_slug(self.config_path, self.root_dir)
         self.output_dir = self.root_dir / self.config['build']['output_directory'] / project_name
 
@@ -46,8 +47,12 @@ class SCADBuilder:
 
         config, model_dir = load_merged_config(self.config_path)
 
-        # Validate required fields
-        required_fields = ['project', 'source', 'variants', 'build']
+        # Validate required fields. load_merged_config has already checked that
+        # exactly one of source/prebuilt is present; variants only mean anything
+        # for a SCAD model, since a prebuilt package's plates are already fixed.
+        required_fields = ['project', 'build']
+        if not is_prebuilt(config):
+            required_fields.append('variants')
         for field in required_fields:
             if field not in config:
                 raise ValueError(f"Missing required config field: {field}")
@@ -373,7 +378,7 @@ class SCADBuilder:
 
                 rendered = template.render(
                     project=self.config['project'],
-                    variants=self.config['variants'],
+                    variants=self.config.get('variants', {}),
                     profiles=self.config.get('profiles', []),
                     site=site_meta
                 )
@@ -436,12 +441,37 @@ class SCADBuilder:
 
         pack_stls(stl_files, str(output_3mf), plate_names)
 
+    def build_prebuilt(self):
+        """A prebuilt model has no SCAD source, so there is nothing to compile,
+        no variants to export and nothing to render -- its package is committed
+        under model_pages/ and is used from there. Descriptions are the one
+        output that doesn't need a source model, so they still generate."""
+        package = prebuilt_package_path(self.config, self.config_path)
+        root = self.root_dir.resolve()
+        display = package.relative_to(root) if package.is_relative_to(root) else package
+        logger.info(
+            f"Prebuilt model -- using committed package {display}; "
+            "skipping compile, variant export, 3MF packing and image rendering"
+        )
+        self.setup_output_directories(clean=False)
+        self.generate_descriptions()
+
     def build(self, descriptions_only=False, images_only=False):
         """Run the complete build process"""
         total_start_time = time.time()
         logger.info(f"Starting build for project: {self.config['project']['name']}")
 
         try:
+            if self.prebuilt:
+                if images_only:
+                    raise ValueError(
+                        f"{self.config_path} is a prebuilt model -- there is no SCAD source to "
+                        "render images from. Add real photos under the model's images/ directory."
+                    )
+                self.build_prebuilt()
+                logger.info(f"Build completed successfully! (total time: {time.time() - total_start_time:.2f}s)")
+                return
+
             # Step 1: Setup (don't clean existing outputs when only generating descriptions or images)
             self.setup_output_directories(clean=not (descriptions_only or images_only))
 
