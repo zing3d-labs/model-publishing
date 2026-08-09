@@ -197,24 +197,43 @@ Available template variables:
 
 ## Output Structure
 
-After running a build, you'll get:
+Every build writes under `dist/<slug>/`, where the slug comes from the config's own location
+under `model_pages/` (`model_config.project_slug()`) — *not* from `project.name`, which every
+profile of a multi-profile model shares and which would therefore collide. For
+`model_pages/grid_basket/small/build_config.yaml` the slug is `grid_basket_small`:
 
 ```
-dist/
-├── model_compiled.scad       # Compiled SCAD file
-├── variants/                 # Generated 3D files
-│   ├── small.stl
-│   ├── small.3mf
-│   ├── medium.stl
-│   └── medium.3mf
-├── images/                   # Rendered images
-│   ├── small_hero.png
-│   ├── small_profile.png
-│   └── medium_hero.png
-└── descriptions/             # Site-specific descriptions
+dist/grid_basket_small/
+├── grid_basket_cpl.scad          # Compiled SCAD (<source stem>_cpl.scad)
+├── grid_basket_small.3mf         # Packed multi-plate 3MF (<slug>.3mf) — one plate per variant
+├── variants/                     # Per-variant 3D files
+│   ├── grid_basket_small_3x3x3.stl
+│   └── grid_basket_small_3x3x3.3mf
+├── images/                       # Rendered images
+│   ├── small_3x3x3_hero.png
+│   └── small_3x3x3_side.png
+└── descriptions/                 # Site-specific descriptions
     ├── makerworld_description.txt
     └── printables_description.txt
 ```
+
+Notes on the naming:
+
+- **`<slug>.3mf`** is the packed file `scripts/makerworld_update.py` uploads, and its name is
+  what users see on the MakerWorld profile page. Both scripts derive it from `project_slug()`
+  so they always agree — see the note in `CLAUDE.md`.
+- **`variants/`** holds one file per entry in each variant's `outputs:` list, named by that
+  entry's `filename` (defaulting to `<variant_name>.<format>`). A model only gets per-variant
+  `.3mf` files if its config asks for them: `grid_basket` declares both `stl` and `3mf`, while
+  `opengrid_facade` declares `stl` only and so produces 36 STLs and no per-variant 3MF.
+- **`images/`** and **`descriptions/`** are named by the `filename` / `output_file` keys in the
+  `images:` and `templates.sites:` blocks, so a site with no configured output simply has no
+  file there.
+
+A **prebuilt** model (see above) produces only `descriptions/`. There is nothing to compile,
+no variants to export and nothing to render, and its `.3mf` stays committed under
+`model_pages/` rather than being copied into `dist/` — `makerworld_update.py` uploads it from
+there.
 
 ## Advanced Usage
 
