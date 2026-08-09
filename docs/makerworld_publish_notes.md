@@ -19,7 +19,8 @@ the real openGrid Beam geometry change live.
   `model_pages/opengrid_beam/sections/changelog.md` now has a real entry.
 - `makerworld_profile_id` added to all real model configs (beam=2633738,
   facade=2665104, snap=2688055, basket=2754279 — basket has 3 profiles total,
-  only the first is captured; see note in its config).
+  only the first is captured; see note in its config). *(All three basket ids
+  are now captured — see "Update 2026-08-08" below.)*
 - **`scripts/makerworld_update.py` written AND validated end-to-end**, both
   against the test fixture and for a real, live update: `opengrid_beam`'s
   Standard/Full print profile (`2633738`) was updated for real with 21 new
@@ -115,11 +116,12 @@ the real openGrid Beam geometry change live.
    uses at last check — see "Not tested" note further down about existing
    customizations).
 3. ~~Basket (model `2505078`) needs the script extended for multiple print
-   profiles before it can be used there — not started.~~ **The pipeline
-   extension is now built and verified — see "Update 2026-08-07" below.**
-   What still blocks the basket update is narrower than this item implied:
-   only the medium/large `makerworld_profile_id`s are missing. MakerWorld/Reddit
-   comments already posted saying the beam is updated and basket will follow.
+   profiles before it can be used there — not started.~~ **Done.** The pipeline
+   extension is built and verified (see "Update 2026-08-07" below), and all three
+   profile ids are now recorded (see "Update 2026-08-08" below), so all three
+   basket profiles are publishable via `makerworld_update.py update`.
+   MakerWorld/Reddit comments already posted saying the beam is updated and
+   basket will follow — the basket geometry update itself is still to be pushed.
 
 **Everything from that session is committed** (`dfe66c1` and earlier). The
 `models` submodule still shows as dirty (`external/QuackWorks` bump) — that
@@ -155,7 +157,70 @@ so **image rendering is still unexercised** — a full build has not been run.
 (placeholder comments in each config), so they build and render locally but cannot be
 published. `small` = `2754279` is set. Either look the ids up on the live listing or publish
 them via `makerworld_update.py new-profile`. That is the only remaining blocker on the basket
-update itself.
+update itself. — **Resolved 2026-08-08, see below.**
+
+### Update 2026-08-08 — basket profile ids recorded, no publish needed
+
+All three basket print profiles **already existed live** on model `2505078`; nothing had to be
+published. `new-profile` was never run, and shouldn't be for these — the existing profiles have
+real print photos, download counts and Customize history that a fresh profile would not.
+Recorded in the configs:
+
+| profile dir | live profile name | `makerworld_profile_id` |
+| --- | --- | --- |
+| `grid_basket/small` | 3x3x3 Bast | `2754279` (already set) |
+| `grid_basket/medium` | 5x5x5 Basket | `2758823` |
+| `grid_basket/large` | 7x7x7 Basket | `2758832` |
+
+Ids read off the live listing's per-profile URL fragment
+(`.../2505078-opengrid-basket#profileId-XXXXXXX`) — the same `#profileId-` fragment
+`load_project_config`'s error message points at. Verified by loading all three configs through
+`makerworld_update.load_project_config()`: each resolves its own `profile_id`, its own
+`dist/grid_basket_{small,medium,large}` slug, and the shared `verify_name` "openGrid Basket".
+
+Note the live profile names are `NxNxN`-style, not the `Small/Medium/Large Basket` names used
+in `model.yaml`'s `profiles:` list and the variant names — ours are description copy, MakerWorld's
+are the actual profile titles. That mismatch is expected and is exactly why `poll_verification`
+matches on `makerworld_model_name` rather than `project.name`.
+
+Pushing the basket geometry update is now unblocked: `makerworld_update.py update
+grid_basket/<profile>` for each of the three.
+
+**A full build was finally run** (all three basket profiles, non-`-d`), closing the "image
+rendering still unexercised" caveat above — STL, packed `.3mf` and both PNG renders all produced
+for each profile. That run immediately caught a bug the `-d` runs structurally could not:
+
+#### Packed `.3mf` filename now comes from `project_slug`, not `project.name`
+
+`scad_builder.pack_3mf()` named its output from `project.name`, while
+`makerworld_update.resolve_dist_files()` looks for `dist/<slug>/<slug>.3mf`. Post-restructure
+those stopped agreeing for **every multi-profile config** — all three baskets built to
+`opengrid_basket.3mf` and both beams to `opengrid_beam.3mf`, so `update`/`new-profile` died with
+"not found. Build it first" on a build that had just succeeded. Same
+`project.name`-is-shared-across-profiles collision `project_slug()` was introduced to fix, just
+left unfixed one layer down at the filename. The two flat models only worked by coincidence
+(`opengrid_facade` slugifies to its own directory name).
+
+Fixed by naming the packed file `{project_slug}.3mf` in `pack_3mf()`, so both scripts derive it
+from the same function. Verified: all 8 configs agree, no duplicate slugs.
+
+**Found twice, independently.** PR #10 (`b234b6d`) landed the same `pack_3mf()` fix while this
+branch was open, and also caught a second call site this branch never touched:
+`ci_output_dir.py` printed `dist/test_fixture/descriptions` for `_test_fixture`, failing the
+Publish workflow's upload step (`if-no-files-found: error`) — which is why CI had been red on
+`main` since PR #8 merged. Two sessions hitting the same bug from different directions is worth
+noting: `project_slug()` was introduced for the *directory* name in PR #8 and every other place
+deriving that path from `project.name` was left behind, so expect stragglers if a third turns up.
+
+Deliberate consequence — this is the filename users see on the profile page, and per-profile
+names are better than three identical `opengrid_basket.3mf` downloads:
+
+| config | packed filename | vs live |
+| --- | --- | --- |
+| `grid_basket/{small,medium,large}` | `grid_basket_<size>.3mf` | new |
+| `opengrid_beam/full` | `opengrid_beam_full.3mf` | live is `opengrid_beam.3mf` — **renames on next push** |
+| `opengrid_beam/lite` | `opengrid_beam_lite.3mf` | matches live |
+| `opengrid_facade`, `opengrid_dual_sided_snap` | unchanged | unchanged |
 
 ### Update 2026-08-09 — prebuilt models (no SCAD source)
 

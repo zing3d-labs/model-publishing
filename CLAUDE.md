@@ -54,6 +54,9 @@ python scripts/scad_builder.py model_pages/grid_basket/small/build_config.yaml
 
 Each profile builds to its own `dist/` directory (`grid_basket_small`, `grid_basket_medium`, …)
 rather than one per model, since every profile of a model shares the same `project.name`.
+The packed `.3mf` is named for that same slug (`dist/<slug>/<slug>.3mf`) — never for
+`project.name`, which would collide across a model's profiles and is also what
+`scripts/makerworld_update.py` looks for when publishing.
 
 ### Copying Description to Clipboard (MakerWorld)
 ```bash

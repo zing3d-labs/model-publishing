@@ -6,12 +6,6 @@
 # fixed upstream in openscad-models PR #11, pulled in via the models
 # submodule bump. Ship this alongside the corner-cap update and mention both
 # fixes together in the MakerWorld changelog/comment.
-#
-# makerworld_profile_id is not yet known -- add it here once the real
-# large-size profile id is looked up from the live MakerWorld listing
-# (https://makerworld.com/en/models/2505078-opengrid-basket edit page).
-# Until then this config can build/render locally but NOT be published via
-# scripts/makerworld_update.py (it requires the profile id).
 
 variants:
   large_7x7x7:
@@ -37,8 +31,9 @@ variants:
       - format: "3mf"
         filename: "grid_basket_large_7x7x7.3mf"
 
-# project:
-#   makerworld_profile_id: TODO -- see note above
+project:
+  # Live profile "7x7x7 Basket" on model 2505078.
+  makerworld_profile_id: 2758832
 
 # Image generation settings
 images:
