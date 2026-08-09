@@ -426,7 +426,12 @@ class SCADBuilder:
             logger.info("No STL files found, skipping 3MF packing")
             return
 
-        project_name = self.config['project']['name'].lower().replace(' ', '_')
+        # Name the package after the config's slug, not project.name -- the slug
+        # is what names output_dir and what makerworld_update.py looks for
+        # (dist/<slug>/<slug>.3mf). project.name is shared by every profile of a
+        # multi-profile model, so using it here wrote dist/grid_basket_small/
+        # opengrid_basket.3mf, which the uploader could never find.
+        project_name = project_slug(self.config_path, self.root_dir)
         output_3mf = self.output_dir / f"{project_name}.3mf"
 
         pack_stls(stl_files, str(output_3mf), plate_names)
