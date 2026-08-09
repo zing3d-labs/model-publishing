@@ -37,8 +37,8 @@ class SCADBuilder:
         self.root_dir = Path(__file__).parent.parent
         self.config, self.model_dir = self.load_config()
         self.prebuilt = is_prebuilt(self.config)
-        project_name = project_slug(self.config_path, self.root_dir)
-        self.output_dir = self.root_dir / self.config['build']['output_directory'] / project_name
+        self.project_slug = project_slug(self.config_path, self.root_dir)
+        self.output_dir = self.root_dir / self.config['build']['output_directory'] / self.project_slug
 
     def load_config(self) -> tuple[Dict[str, Any], Path | None]:
         """Load and validate the build configuration, merging in a parent
@@ -435,9 +435,9 @@ class SCADBuilder:
         # is what names output_dir and what makerworld_update.py looks for
         # (dist/<slug>/<slug>.3mf). project.name is shared by every profile of a
         # multi-profile model, so using it here wrote dist/grid_basket_small/
-        # opengrid_basket.3mf, which the uploader could never find.
-        project_name = project_slug(self.config_path, self.root_dir)
-        output_3mf = self.output_dir / f"{project_name}.3mf"
+        # opengrid_basket.3mf, which the uploader could never find. This is also
+        # the filename users see on the MakerWorld profile page.
+        output_3mf = self.output_dir / f"{self.project_slug}.3mf"
 
         pack_stls(stl_files, str(output_3mf), plate_names)
 

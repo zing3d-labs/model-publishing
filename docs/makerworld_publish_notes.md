@@ -184,8 +184,43 @@ are the actual profile titles. That mismatch is expected and is exactly why `pol
 matches on `makerworld_model_name` rather than `project.name`.
 
 Pushing the basket geometry update is now unblocked: `makerworld_update.py update
-grid_basket/<profile>` for each of the three, once a full (non-`-d`) build has produced the
-`.3mf`s. Image rendering is still unexercised — see the caveat above.
+grid_basket/<profile>` for each of the three.
+
+**A full build was finally run** (all three basket profiles, non-`-d`), closing the "image
+rendering still unexercised" caveat above — STL, packed `.3mf` and both PNG renders all produced
+for each profile. That run immediately caught a bug the `-d` runs structurally could not:
+
+#### Packed `.3mf` filename now comes from `project_slug`, not `project.name`
+
+`scad_builder.pack_3mf()` named its output from `project.name`, while
+`makerworld_update.resolve_dist_files()` looks for `dist/<slug>/<slug>.3mf`. Post-restructure
+those stopped agreeing for **every multi-profile config** — all three baskets built to
+`opengrid_basket.3mf` and both beams to `opengrid_beam.3mf`, so `update`/`new-profile` died with
+"not found. Build it first" on a build that had just succeeded. Same
+`project.name`-is-shared-across-profiles collision `project_slug()` was introduced to fix, just
+left unfixed one layer down at the filename. The two flat models only worked by coincidence
+(`opengrid_facade` slugifies to its own directory name).
+
+Fixed by naming the packed file `{project_slug}.3mf` in `pack_3mf()`, so both scripts derive it
+from the same function. Verified: all 8 configs agree, no duplicate slugs.
+
+**Found twice, independently.** PR #10 (`b234b6d`) landed the same `pack_3mf()` fix while this
+branch was open, and also caught a second call site this branch never touched:
+`ci_output_dir.py` printed `dist/test_fixture/descriptions` for `_test_fixture`, failing the
+Publish workflow's upload step (`if-no-files-found: error`) — which is why CI had been red on
+`main` since PR #8 merged. Two sessions hitting the same bug from different directions is worth
+noting: `project_slug()` was introduced for the *directory* name in PR #8 and every other place
+deriving that path from `project.name` was left behind, so expect stragglers if a third turns up.
+
+Deliberate consequence — this is the filename users see on the profile page, and per-profile
+names are better than three identical `opengrid_basket.3mf` downloads:
+
+| config | packed filename | vs live |
+| --- | --- | --- |
+| `grid_basket/{small,medium,large}` | `grid_basket_<size>.3mf` | new |
+| `opengrid_beam/full` | `opengrid_beam_full.3mf` | live is `opengrid_beam.3mf` — **renames on next push** |
+| `opengrid_beam/lite` | `opengrid_beam_lite.3mf` | matches live |
+| `opengrid_facade`, `opengrid_dual_sided_snap` | unchanged | unchanged |
 
 ### Update 2026-08-09 — prebuilt models (no SCAD source)
 
