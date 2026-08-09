@@ -71,7 +71,7 @@ def model_url_for(model_arg: str, root_dir: Path) -> str:
     replying about someone else's model, or before a config exists)."""
     model_dir = root_dir / 'model_pages' / model_arg
     if model_dir.exists():
-        cfg = load_project_config(model_dir, require_profile_id=False)
+        cfg = load_project_config(model_dir, root_dir, require_profile_id=False)
         if not cfg['model_url']:
             raise UpdateError(f"model_pages/{model_arg}/build_config.yaml has no project.makerworld_url")
         return cfg['model_url']
