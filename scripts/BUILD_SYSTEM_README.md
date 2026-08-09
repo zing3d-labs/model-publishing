@@ -63,6 +63,21 @@ variants:
       - format: "3mf"
 ```
 
+### Prebuilt models
+
+A model whose `.3mf` already exists (a CAD export, a hand-assembled plate) replaces
+`source:` with `prebuilt:`. Exactly one of the two is required:
+
+```yaml
+prebuilt:
+  package: "package/my_model.3mf"   # relative to this config's dir, in a subdirectory
+```
+
+The package is committed next to the config rather than produced into `dist/`.
+Building such a model generates descriptions only — there's nothing to compile,
+no variants to export and nothing to render — so `variants:` is not required and
+`--images-only` is an error. See `docs/makerworld_publish_notes.md`.
+
 ### Variants
 
 Define different parameter combinations:

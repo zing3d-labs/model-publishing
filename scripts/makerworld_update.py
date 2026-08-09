@@ -16,7 +16,10 @@ Two subcommands, both documented in docs/makerworld_publish_notes.md:
                not needed since it doesn't exist yet -- this command
                prints the resulting id for you to add afterward.
 
-Requires the model to already be built (run scad_builder.py first).
+Requires the model to already be built (run scad_builder.py first). The
+exception is a prebuilt model (one declaring `prebuilt:` instead of
+`source:`): its .3mf is committed under model_pages/ and is uploaded
+straight from there, with no build step and no --scad support.
 
 Attaches over CDP to your regular, already-running main Chrome browser --
 launching a separate/isolated automation profile trips Cloudflare's bot
@@ -53,7 +56,7 @@ import sys
 import time
 from pathlib import Path
 
-from model_config import load_merged_config, project_slug
+from model_config import is_prebuilt, load_merged_config, prebuilt_package_path, project_slug
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -84,20 +87,29 @@ def load_project_config(model_dir: Path, root_dir: Path, require_profile_id: boo
             "(the #profileId-XXXXXXX fragment) and add it to the config."
         )
 
-    source = config.get('source', {})
-    if 'input_file' not in source:
-        raise UpdateError(f"{config_path} is missing source.input_file")
+    # A prebuilt model ships a committed .3mf and has no SCAD source at all --
+    # no input_file to name the raw customizer upload after, and nothing in
+    # dist/ to look for (see resolve_upload_files).
+    if is_prebuilt(config):
+        prebuilt_package = prebuilt_package_path(config, config_path)
+        source_stem = None
+    else:
+        source = config.get('source', {})
+        if 'input_file' not in source:
+            raise UpdateError(f"{config_path} is missing source.input_file")
+        prebuilt_package = None
+        source_stem = Path(source['input_file']).stem
 
     # Used to locate dist/<slug>/ -- derived from the config's own location
     # under model_pages/, not project.name, since project.name is shared
     # identically across every profile of a multi-profile model and would
     # collide (see scripts/model_config.py).
     project_name = project_slug(config_path, root_dir)
-    source_stem = Path(source['input_file']).stem
 
     return {
         'project_name': project_name,
         'source_stem': source_stem,
+        'prebuilt_package': prebuilt_package,
         'profile_id': project.get('makerworld_profile_id'),
         'model_url': project.get('makerworld_url'),
         # The verifying-queue page shows the real MakerWorld model name, which
@@ -116,7 +128,21 @@ def model_id_from_url(url: str) -> str:
     return slug.split('-')[0]
 
 
-def resolve_dist_files(root_dir: Path, project_name: str, source_stem: str, need_scad: bool) -> dict:
+def resolve_upload_files(root_dir: Path, cfg: dict, need_scad: bool) -> dict:
+    """Locate the files to upload. For a normal model these are build outputs
+    under dist/; for a prebuilt model the .3mf is the committed package itself,
+    used straight from model_pages/ -- deliberately NOT copied into dist/, which
+    is gitignored and gets wiped by the next clean build."""
+    if cfg['prebuilt_package']:
+        if need_scad:
+            raise UpdateError(
+                "--scad is not available for a prebuilt model: its package is committed "
+                "as a .3mf and there is no SCAD customizer source to upload."
+            )
+        logger.info(f"Prebuilt model -- uploading committed package {cfg['prebuilt_package']}")
+        return {'mf3_path': cfg['prebuilt_package']}
+
+    project_name, source_stem = cfg['project_name'], cfg['source_stem']
     dist_dir = root_dir / 'dist' / project_name
     mf3_path = dist_dir / f'{project_name}.3mf'
     if not mf3_path.exists():
@@ -411,7 +437,7 @@ def run_update(args, root_dir: Path):
         sys.exit(1)
 
     cfg = load_project_config(model_dir, root_dir)
-    files = resolve_dist_files(root_dir, cfg['project_name'], cfg['source_stem'], need_scad=args.scad)
+    files = resolve_upload_files(root_dir, cfg, need_scad=args.scad)
 
     p, page = connect_chrome(args.chrome_user_data_dir)
     try:
@@ -452,7 +478,7 @@ def run_new_profile(args, root_dir: Path):
             f"model_pages/{args.model}/build_config.yaml is missing project.makerworld_url "
             "-- needed to determine the model id to attach the new profile to."
         )
-    files = resolve_dist_files(root_dir, cfg['project_name'], cfg['source_stem'], need_scad=False)
+    files = resolve_upload_files(root_dir, cfg, need_scad=False)
     model_id = model_id_from_url(cfg['model_url'])
 
     photo_paths = [Path(p) for p in args.photo]

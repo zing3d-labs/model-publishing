@@ -1,0 +1,37 @@
+# Prebuilt Test Fixture Build Configuration
+#
+# Disposable model used only to exercise the PREBUILT path — a model whose
+# .3mf already exists and is committed, with no SCAD source and no build step.
+# The package here is a copy of _test_fixture's packed output; it is checked in
+# on purpose, since nothing regenerates it.
+#
+# Not a real product — do not use as a template for real models, and do not
+# link it from any real model's related_models section.
+
+project:
+  name: "Prebuilt Test Fixture"
+  description: "Disposable committed 3MF used to test the prebuilt-source publish path. Not a real model."
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-NC-SA 4.0"
+
+# Declared INSTEAD OF `source:` — the two are mutually exclusive. The path is
+# relative to this config's own directory and must sit in a subdirectory of it.
+prebuilt:
+  package: "package/test_fixture_prebuilt.3mf"
+
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "original"
+      category: "Organizers"
+      tags: "test"
+
+build:
+  output_directory: "dist/"
+  clean_before_build: true
