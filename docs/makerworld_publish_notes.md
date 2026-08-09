@@ -119,7 +119,8 @@ the real openGrid Beam geometry change live.
    but not yet tested against the new connection approach. Worth a test run
    against `_test_fixture --scad` before using it on beam (241 existing Customize
    uses at last check — see "Not tested" note further down about existing
-   customizations).
+   customizations). **Staged and ready to run — see "Update 2026-08-09 —
+   `--scad` live test staged" below for the exact command and what to check.**
 3. ~~Basket (model `2505078`) needs the script extended for multiple print
    profiles before it can be used there — not started.~~ **Done.** The pipeline
    extension is built and verified (see "Update 2026-08-07" below), and all three
@@ -260,6 +261,43 @@ build descriptions unchanged.
 ScanSnap openGrid shelf. The upload path itself is shared with normal models from
 `resolve_upload_files()` onward, so only the file-resolution half is new and unexercised live.
 
+### Update 2026-08-09 — `--scad` live test staged (loose end #2)
+
+Everything up to the browser is done; the live run itself has **not happened yet** — it needs a
+human at the keyboard to approve Chrome's remote-debugging popup.
+
+**Fixture prepared:** `model_pages/_test_fixture/test_fixture.scad` gained a new `/* [Lid] */`
+parameter group (`Lid_Thickness`, default `0`). The default of 0 is the point: geometry — and
+therefore the packed `.3mf` — is unchanged, which isolates the customizer source. If the live
+customizer shows a **Lid** section after the run, the raw `.scad` was genuinely replaced. Without
+a marker like this a clean exit only proves the script didn't throw, not that the new file landed.
+
+**Pre-flight done without a browser:** a full build of `_test_fixture` (flat) and
+`grid_basket/small` (multi-profile) both succeed, and `resolve_upload_files(..., need_scad=True)`
+resolves real on-disk files for each — `.3mf` plus the `_cpl`-stripped `.scad`. So the file
+resolution half of `--scad` is confirmed; only the browser half is untested.
+
+Watch out for a stale-branch trap here: this work started on the pre-PR-#10 main and
+"discovered" the artifact-naming bug that PR #10 had *already* fixed upstream (in the producer,
+`pack_3mf`, rather than the consumer). Two opposite fixes for one defect would have re-broken it.
+Rebase before concluding that something in this pipeline is broken.
+
+Side effect of PR #10 worth knowing before the next real upload: the packed `.3mf` is now named
+from the config slug, so the file MakerWorld shows end users changes for multi-profile models —
+beam Full uploads `opengrid_beam_full.3mf` where it previously uploaded `opengrid_beam.3mf`.
+Cosmetic, and arguably clearer now that profiles are split, but it *will* be visible on the
+listing the next time beam is updated.
+
+**To finish loose end #2** — Chrome running, logged into MakerWorld,
+`chrome://inspect/#remote-debugging` toggled on, and approve the popup when it appears:
+
+```bash
+python3 scripts/scad_builder.py model_pages/_test_fixture/build_config.yaml
+python3 scripts/makerworld_update.py update _test_fixture --no-notify --scad
+```
+
+Then confirm on the live listing that Customize still works, the model id / `designId` is
+unchanged, and the customizer shows the new **Lid** group.
 ### Update 2026-08-12 — `new-model`, the first-time publish subcommand
 
 `makerworld_update.py` had two subcommands and **neither created a model**: `update` replaces an
