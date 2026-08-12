@@ -638,7 +638,7 @@ def add_model_origins(page, urls: list[str]):
 # handles when a human pastes from copy_description.py's clipboard output -- so
 # the published description matches the by-hand flow, headings and all.
 PASTE_HTML_JS = """
-([element, html]) => {
+(element, html) => {
   const data = new DataTransfer();
   data.setData('text/html', html);
   data.setData('text/plain', element.textContent || '');
@@ -695,19 +695,47 @@ def submit_crop_dialog(page):
     logger.info("Cover set (crop dialog submitted)")
 
 
-def wait_for_photos(page, container_selector: str, label: str):
-    """Photo sections title themselves with a live count ("Model Pictures ( 1 /
-    16 )"), which is the only confirmation that an upload actually landed. The
-    count isn't asserted exactly -- Print Profile Pictures opens at 1, having
-    inherited a Model Picture -- only that it is no longer zero."""
-    section = page.locator(container_selector)
+PHOTO_COUNT_RE = re.compile(r'\(\s*(\d+)\s*/\s*\d+\s*\)')
+
+
+def read_photo_count(page, container_selector: str) -> int:
+    """Photo sections title themselves with a live count -- "Model Pictures
+    ( 1 / 16 )" -- which is the only visible confirmation an upload landed."""
+    match = PHOTO_COUNT_RE.search(page.locator(container_selector).inner_text())
+    return int(match.group(1)) if match else 0
+
+
+def upload_photos(page, container_selector: str, paths: list[Path], label: str):
+    """Upload into a photo section and wait for its count to actually rise.
+
+    Waiting for merely a non-zero count is not enough: Print Profile Pictures
+    opens at 1, having inherited a Model Picture, so a non-zero check passes
+    instantly on a photo that isn't ours and moves on mid-upload."""
+    before = read_photo_count(page, container_selector)
+    page.locator(f'{container_selector} input[type="file"]').set_input_files(
+        [str(p) for p in paths]
+    )
     try:
-        section.get_by_text(re.compile(r'\(\s*[1-9]\d*\s*/')).first.wait_for(
-            state='visible', timeout=UPLOAD_TIMEOUT_MS
+        page.wait_for_function(
+            """([selector, before]) => {
+                 const el = document.querySelector(selector);
+                 const m = el && el.innerText.match(/\\(\\s*(\\d+)\\s*\\/\\s*\\d+\\s*\\)/);
+                 return !!m && Number(m[1]) > before;
+               }""",
+            arg=[container_selector, before],
+            timeout=UPLOAD_TIMEOUT_MS,
         )
     except Exception:
-        raise UpdateError(f"{label}: the uploaded photo(s) never appeared.")
-    logger.info(f"{label}: {section.inner_text().splitlines()[0].strip()}")
+        raise UpdateError(
+            f"{label}: the count never rose above {before} -- the photo(s) didn't upload."
+        )
+    after = read_photo_count(page, container_selector)
+    logger.info(f"{label}: {before} -> {after}")
+    if after - before < len(paths):
+        logger.warning(
+            f"{label}: uploaded {len(paths)} photo(s) but the count only rose by "
+            f"{after - before} -- MakerWorld may have rejected one."
+        )
 
 
 def raise_on_form_errors(page, step: str):
@@ -814,10 +842,7 @@ def create_model(
         page.locator('.js-scroll-cover input[type="file"]').nth(slot).set_input_files(str(cover))
         submit_crop_dialog(page)
     if photos:
-        page.locator('.js-scroll-designPictures input[type="file"]').set_input_files(
-            [str(p) for p in photos]
-        )
-        wait_for_photos(page, '.js-scroll-designPictures', 'Model Pictures')
+        upload_photos(page, '.js-scroll-designPictures', photos, 'Model Pictures')
 
     # Model Name goes LAST, for the same reason the print profile's does:
     # MakerWorld autofills it from the uploaded file asynchronously and will
@@ -836,10 +861,7 @@ def create_model(
     page.locator('input[name="profileTitle"]').wait_for(state='visible')
     page.locator('input[name="instanceSetting.isPrinterTested"]').check()
     if photos:
-        page.locator('.printProfilePicture input[type="file"]').set_input_files(
-            [str(p) for p in photos]
-        )
-        wait_for_photos(page, '.printProfilePicture', 'Print Profile Pictures')
+        upload_photos(page, '.printProfilePicture', photos, 'Print Profile Pictures')
     if fields['profile_description']:
         set_rich_description(
             page, fields['profile_description'], container='.printProfileDescription'

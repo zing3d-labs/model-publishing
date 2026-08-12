@@ -107,12 +107,11 @@ the real openGrid Beam geometry change live.
   text — see "MakerWorld comment automation" section below for details.
 
 **Loose ends / next steps, in order:**
-0. (added 2026-08-12) `new-model` exists — see "Update 2026-08-12". Rehearsed to a saved draft,
-   never through Publish; re-run it via the script's own Playwright session (`new-model
-   _test_fixture_prebuilt --private --draft`) once Chrome's remote-debugging endpoint is
-   available, and see that update's "what is still unexercised" list before first real use.
-   A throwaway draft ("Automation Rehearsal Fixture (Private)", draft `9196491`) was left behind
-   on purpose, same as the other rehearsal junk below.
+0. (added 2026-08-12) `new-model` exists and works — see "Update 2026-08-12". Rehearsed by the
+   script itself, end to end, but only ever as far as **`--draft`**: nothing has been published
+   through it, so read that update's "what is still unexercised" list (the Publish path, `--scad`,
+   the remix Model Origin path) before the first real use. Three throwaway drafts were left
+   behind on purpose (`9196491`, `9196793`, `9196815`), same as the other rehearsal junk below.
 1. Test fixture has accumulated throwaway junk from rehearsals (3 print
    profiles, 4 comments/replies) — deliberately left alone, Private and
    disposable, not worth the cleanup trip. Ignore.
@@ -442,12 +441,38 @@ Jonathan's call (2026-08-12) was to go **no further than draft**, so the rehears
 click short of Publish on purpose.
 
 **Exercised for real, against live MakerWorld, on the disposable prebuilt fixture**
-(`model_pages/_test_fixture_prebuilt/`, whose committed `.3mf` was the upload): every step of the
-wizard, start to finish, ending in a saved draft — the account went to `Draft (1)` with
-`Published Models (8)`, `Verifying (0)`, `Failed (0)` unchanged. That run is what produced every
-selector, the license table, the crop dialog, the "Add Print Profile" transition, the
-`profileTitle` autofill and the never-disabled "Next Step" above; several of them contradicted
-what the code assumed at the time and were fixed because of it.
+(`model_pages/_test_fixture_prebuilt/`, whose committed `.3mf` was the upload): the whole wizard
+start to finish, ending in a saved draft, with `Published Models (8)`, `Verifying (0)` and
+`Failed (0)` unchanged throughout. First by hand through chrome-devtools MCP — which is what
+produced every selector, the license table, the crop dialog, the "Add Print Profile" transition,
+the `profileTitle` autofill and the never-disabled "Next Step" above — and then **by the script
+itself**, `new-model _test_fixture_prebuilt --private --draft --cover … --photo …`, in ~26s of
+browser time with no warnings.
+
+The saved draft was then re-opened and read back field by field: Model Name "Prebuilt Test
+Fixture" (ours, not MakerWorld's autofill), Category Organizers, tag `test`, license "Creative
+Commons Attribution-Noncommercial-Share Alike", Visibility Private, cover set, Model Pictures
+1/16, Print Profile Pictures 2/37 with both thumbnails, guidelines checkbox ticked, Print Plates
+(1), no validation errors — and the description present as real editor blocks (four `<h2>`s,
+`<strong>`, 1300 chars).
+
+Three bugs the live runs caught that reading the code would not have:
+
+- `Locator.evaluate(fn, arg)` passes `(element, arg)`, not a single array — the paste helper's
+  `([element, html]) => …` signature blew up with "object is not iterable" the first time it ran.
+- Waiting for a photo section's count to be merely **non-zero** passes instantly on the wrong
+  photo: Print Profile Pictures opens at 1, having inherited a Model Picture, so the check cleared
+  before our upload landed. It now records the count first and waits for it to *rise*
+  (`upload_photos()`), which the next run showed doing exactly that: `1 -> 2`.
+- (Before those, the never-disabled "Next Step" described above.)
+
+**One nuance worth knowing, not a bug:** bullet lists in a description don't survive as lists.
+`markdown.markdown(..., extensions=['sane_lists'])` needs a blank line before a list that follows
+a paragraph, and the section templates don't leave one, so `- item` lines render as plain text.
+This is the *existing* behaviour of `copy_description.py`, shared through
+`description_fields.markdown_to_html()` — i.e. publishing via `new-model` produces exactly what
+pasting from the clipboard by hand produces. Fixing it means putting a blank line before lists in
+`templates/sections/`, which changes every model's copy, so it's deliberately left alone here.
 
 **Not exercised:**
 - **The Publish path.** `poll_verification()`, `find_new_model_id()` and `find_new_profile_id()`
@@ -460,11 +485,8 @@ what the code assumed at the time and were fixed because of it.
 - **The remix path.** The fixture is `model_type: original`, so `add_model_origins()` hasn't run
   inside a real publish — only the underlying interaction was confirmed by hand on an existing
   model's edit page (paste URL → click the resolved suggestion).
-- The rehearsal drove the flow through chrome-devtools MCP rather than the script's own
-  Playwright session, because Chrome's remote-debugging endpoint was stale for the whole session
-  (see the stale-`DevToolsActivePort` note under "Browser connection"). Same selectors, same
-  page, different driver — worth re-running `new-model ... --draft` through the script itself
-  before trusting it unattended.
+- **Unattended running is not a thing.** Every run needs someone to click Chrome's "Allow remote
+  debugging?" popup, same as `update`/`new-profile`.
 
 ## openGrid Beam: Full/Lite split into two print profiles
 
