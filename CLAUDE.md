@@ -29,7 +29,11 @@ OpenSCAD source files live in the `models/` submodule ([zing3d-labs/openscad-mod
   - `model_config.py` - Config loading shared by the build and publish scripts
   - `stls_to_3mf.py` - 3MF packer
   - `copy_description.py` - macOS clipboard helper for MakerWorld
-  - `makerworld_update.py` - Publish/update print profiles on MakerWorld (Playwright)
+  - `makerworld_update.py` - Create/publish/update MakerWorld listings (Playwright):
+    `new-model` (create the listing itself), `new-profile` (add a print profile to an
+    existing model), `update` (replace an existing profile's file)
+  - `description_fields.py` - Parses the built `=== FIELD ===` descriptions, shared by
+    `copy_description.py` and `makerworld_update.py new-model`
   - `makerworld_comments.py` - Read and reply to MakerWorld comments (Playwright)
 - `templates/` - Jinja2 templates for description generation
 - `dist/` - Build outputs (gitignored)
