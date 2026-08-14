@@ -32,7 +32,7 @@ variants:
         filename: "a_std_nondir_b_std_nondir.stl"
 
   a_std_dir_b_std_nondir:
-    name: "A Standard Directional / B Standard Nondirectional"
+    name: "A Standard Directional / B Standard Nondirectional (reversible)"
     parameters:
       Lite_A: false
       Directional_A: true
@@ -41,17 +41,6 @@ variants:
     outputs:
       - format: "stl"
         filename: "a_std_dir_b_std_nondir.stl"
-
-  a_std_nondir_b_std_dir:
-    name: "A Standard Nondirectional / B Standard Directional"
-    parameters:
-      Lite_A: false
-      Directional_A: false
-      Lite_B: false
-      Directional_B: true
-    outputs:
-      - format: "stl"
-        filename: "a_std_nondir_b_std_dir.stl"
 
   a_std_dir_b_std_dir:
     name: "A Standard Directional / B Standard Directional"
@@ -65,7 +54,7 @@ variants:
         filename: "a_std_dir_b_std_dir.stl"
 
   a_lite_nondir_b_std_nondir:
-    name: "A Lite Nondirectional / B Standard Nondirectional"
+    name: "A Lite Nondirectional / B Standard Nondirectional (reversible)"
     parameters:
       Lite_A: true
       Directional_A: false
@@ -76,7 +65,7 @@ variants:
         filename: "a_lite_nondir_b_std_nondir.stl"
 
   a_lite_dir_b_std_nondir:
-    name: "A Lite Directional / B Standard Nondirectional"
+    name: "A Lite Directional / B Standard Nondirectional (reversible)"
     parameters:
       Lite_A: true
       Directional_A: true
@@ -87,7 +76,7 @@ variants:
         filename: "a_lite_dir_b_std_nondir.stl"
 
   a_lite_nondir_b_std_dir:
-    name: "A Lite Nondirectional / B Standard Directional"
+    name: "A Lite Nondirectional / B Standard Directional (reversible)"
     parameters:
       Lite_A: true
       Directional_A: false
@@ -98,7 +87,7 @@ variants:
         filename: "a_lite_nondir_b_std_dir.stl"
 
   a_lite_dir_b_std_dir:
-    name: "A Lite Directional / B Standard Directional"
+    name: "A Lite Directional / B Standard Directional (reversible)"
     parameters:
       Lite_A: true
       Directional_A: true
@@ -107,50 +96,6 @@ variants:
     outputs:
       - format: "stl"
         filename: "a_lite_dir_b_std_dir.stl"
-
-  a_std_nondir_b_lite_nondir:
-    name: "A Standard Nondirectional / B Lite Nondirectional"
-    parameters:
-      Lite_A: false
-      Directional_A: false
-      Lite_B: true
-      Directional_B: false
-    outputs:
-      - format: "stl"
-        filename: "a_std_nondir_b_lite_nondir.stl"
-
-  a_std_dir_b_lite_nondir:
-    name: "A Standard Directional / B Lite Nondirectional"
-    parameters:
-      Lite_A: false
-      Directional_A: true
-      Lite_B: true
-      Directional_B: false
-    outputs:
-      - format: "stl"
-        filename: "a_std_dir_b_lite_nondir.stl"
-
-  a_std_nondir_b_lite_dir:
-    name: "A Standard Nondirectional / B Lite Directional"
-    parameters:
-      Lite_A: false
-      Directional_A: false
-      Lite_B: true
-      Directional_B: true
-    outputs:
-      - format: "stl"
-        filename: "a_std_nondir_b_lite_dir.stl"
-
-  a_std_dir_b_lite_dir:
-    name: "A Standard Directional / B Lite Directional"
-    parameters:
-      Lite_A: false
-      Directional_A: true
-      Lite_B: true
-      Directional_B: true
-    outputs:
-      - format: "stl"
-        filename: "a_std_dir_b_lite_dir.stl"
 
   a_lite_nondir_b_lite_nondir:
     name: "A Lite Nondirectional / B Lite Nondirectional"
@@ -164,7 +109,7 @@ variants:
         filename: "a_lite_nondir_b_lite_nondir.stl"
 
   a_lite_dir_b_lite_nondir:
-    name: "A Lite Directional / B Lite Nondirectional"
+    name: "A Lite Directional / B Lite Nondirectional (reversible)"
     parameters:
       Lite_A: true
       Directional_A: true
@@ -173,17 +118,6 @@ variants:
     outputs:
       - format: "stl"
         filename: "a_lite_dir_b_lite_nondir.stl"
-
-  a_lite_nondir_b_lite_dir:
-    name: "A Lite Nondirectional / B Lite Directional"
-    parameters:
-      Lite_A: true
-      Directional_A: false
-      Lite_B: true
-      Directional_B: true
-    outputs:
-      - format: "stl"
-        filename: "a_lite_nondir_b_lite_dir.stl"
 
   a_lite_dir_b_lite_dir:
     name: "A Lite Directional / B Lite Directional"

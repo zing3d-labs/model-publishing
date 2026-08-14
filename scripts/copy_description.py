@@ -95,24 +95,38 @@ def main():
         f.write(html)
         html_path = f.name
 
+    # Also carry the markdown as the plain-text flavor. Without it the clipboard
+    # holds an HTML representation only, which pastes into CKEditor but looks
+    # completely empty everywhere else -- plain text fields, clipboard managers,
+    # and a plain Cmd+V all find nothing.
+    with tempfile.NamedTemporaryFile(suffix=".md", mode="w", encoding="utf-8", delete=False) as f:
+        f.write(md_text)
+        text_path = f.name
+
     try:
-        # Use Swift to set HTML type on clipboard via NSPasteboard
+        # Use Swift to set both types on the clipboard via NSPasteboard. Receivers
+        # pick the richest representation they understand, so declaring HTML first
+        # keeps rich text editors on the formatted version.
         swift_code = f'''
 import AppKit
 let html = try! String(contentsOfFile: "{html_path}", encoding: .utf8)
+let text = try! String(contentsOfFile: "{text_path}", encoding: .utf8)
 let pb = NSPasteboard.general
 pb.clearContents()
-pb.setData(html.data(using: .utf8)!, forType: NSPasteboard.PasteboardType.html)
+pb.declareTypes([.html, .string], owner: nil)
+pb.setData(html.data(using: .utf8)!, forType: .html)
+pb.setString(text, forType: .string)
 '''
         subprocess.run(
             ["swift", "-e", swift_code],
             check=True,
             capture_output=True,
         )
-        print(f"Copied description for '{args.site}' to clipboard as HTML")
+        print(f"Copied description for '{args.site}' to clipboard as HTML + plain text")
         print(f"Source: {dist_path}")
     finally:
         Path(html_path).unlink(missing_ok=True)
+        Path(text_path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
