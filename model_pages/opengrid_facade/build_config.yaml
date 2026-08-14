@@ -1,6 +1,11 @@
 # OpenGrid Facade Build Configuration
-# Generates all Lite facade sizes from 2x2 to 9x9 (max that fits on a 256mm Bambu P1S plate)
-# 36 variants total
+# Generates Lite facade sizes from 2x2 up to 8x9, 35 variants total.
+#
+# 9x9 is deliberately absent: at 252x252mm it cannot be placed on the P1S's 256mm
+# bed without overlapping the 18x28mm front-left exclusion zone (clearing it would
+# need 270mm in x or 280mm in y), so Bambu Studio flags the plate and MakerWorld
+# rejects the upload. 8x9 and 9x8-shaped parts are fine -- stls_to_3mf.py offsets
+# them off plate-center to clear the zone.
 
 project:
   name: "openGrid Facade"
@@ -125,9 +130,6 @@ variants:
   lite_8x9:
     parameters: {Grid_Type: "Lite", Units_X: 8, Units_Y: 9}
     outputs: [{format: stl, filename: facade_lite_8x9.stl}]
-  lite_9x9:
-    parameters: {Grid_Type: "Lite", Units_X: 9, Units_Y: 9}
-    outputs: [{format: stl, filename: facade_lite_9x9.stl}]
 
 # Image generation settings
 images:

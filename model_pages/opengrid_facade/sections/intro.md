@@ -1,6 +1,6 @@
 A flat facade panel that snaps onto openGrid tiles, giving a clean finished look to baskets, walls, or enclosures built with openGrid. Features configurable corner rounding or chamfering, adjustable snap placement, and optional removal notches for easy disassembly.
 
-Designed for Lite (3.4mm) openGrid tiles, available in all sizes from 2x2 to 9x9 units. Use the OpenSCAD customizer to generate any size you need.
+Designed for Lite (3.4mm) openGrid tiles. The download covers every size from 2x2 up to 8x9 units -- that's everything that fits a 256mm plate. Use the OpenSCAD customizer to generate any other size you need.
 
 ## Snap Recommendations
 
