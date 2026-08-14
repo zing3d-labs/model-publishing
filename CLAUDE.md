@@ -35,6 +35,12 @@ OpenSCAD source files live in the `models/` submodule ([zing3d-labs/openscad-mod
   - `description_fields.py` - Parses the built `=== FIELD ===` descriptions, shared by
     `copy_description.py` and `makerworld_update.py new-model`
   - `makerworld_comments.py` - Read and reply to MakerWorld comments (Playwright)
+  - `preview_listing.py` - Render the built description + photos into a standalone HTML
+    preview of the listing, for review before any browser opens. Takes the same
+    `--cover`/`--photo` flags as `makerworld_update.py new-model`, in the same order, and
+    converts the copy with the same `description_fields.markdown_to_html()` the publisher
+    pastes into CKEditor — so markdown that won't survive the publish doesn't survive the
+    preview either
 - `templates/` - Jinja2 templates for description generation
 - `dist/` - Build outputs (gitignored)
 
