@@ -20,13 +20,8 @@ from pathlib import Path
 
 import yaml
 
+from description_fields import description_body, markdown_to_html
 from model_config import project_slug
-
-try:
-    import markdown
-except ImportError:
-    print("Error: 'markdown' package required. Install with: pip install markdown")
-    sys.exit(1)
 
 
 def main():
@@ -67,26 +62,15 @@ def main():
         print("Have you run the build first?")
         sys.exit(1)
 
-    # Read the description
-    md_text = dist_path.read_text()
+    # Read the description -- just the DESCRIPTION field for a site whose
+    # template uses the === FIELD === markers, the whole file otherwise.
+    md_text = description_body(dist_path.read_text())
 
-    # Strip the === FIELD === markers and only grab the description section
-    # if the file uses the makerworld_base.md format
-    if "=== DESCRIPTION ===" in md_text:
-        # Extract just the description field
-        parts = md_text.split("=== DESCRIPTION ===")
-        if len(parts) > 1:
-            desc = parts[1]
-            # Cut off at the next === marker if present
-            next_marker = desc.find("===", 3)
-            if next_marker != -1:
-                desc = desc[:next_marker]
-            md_text = desc.strip()
-
-    # Convert markdown to HTML
-    import re
-
-    html_body = markdown.markdown(md_text, extensions=["sane_lists"])
+    try:
+        html_body = markdown_to_html(md_text)
+    except RuntimeError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
     # Put HTML directly on clipboard so CKEditor preserves heading block types
     html = f"<html><body>{html_body}</body></html>"

@@ -107,6 +107,11 @@ the real openGrid Beam geometry change live.
   text — see "MakerWorld comment automation" section below for details.
 
 **Loose ends / next steps, in order:**
+0. (added 2026-08-12) `new-model` exists and works — see "Update 2026-08-12". Rehearsed by the
+   script itself, end to end, but only ever as far as **`--draft`**: nothing has been published
+   through it, so read that update's "what is still unexercised" list (the Publish path, `--scad`,
+   the remix Model Origin path) before the first real use. Three throwaway drafts were left
+   behind on purpose (`9196491`, `9196793`, `9196815`), same as the other rehearsal junk below.
 1. Test fixture has accumulated throwaway junk from rehearsals (3 print
    profiles, 4 comments/replies) — deliberately left alone, Private and
    disposable, not worth the cleanup trip. Ignore.
@@ -239,6 +244,10 @@ nothing to compile". See "Prebuilt models" below for the shape and the rules.
   Deliberately not copied into `dist/`: that's gitignored and any `clean_before_build` wipes it.
   `--scad` is refused for a prebuilt model (there is no customizer source to upload).
 
+**Its first real use** is `new-model` (see "Update 2026-08-12"): the prebuilt fixture is what that
+subcommand was rehearsed against, so `resolve_upload_files()`'s prebuilt branch has now driven a
+real MakerWorld upload rather than only a resolved path.
+
 **Verified** (2026-08-09) against `model_pages/_test_fixture_prebuilt/`, a disposable fixture
 whose package is a copy of `_test_fixture`'s packed output: descriptions generate; the resolved
 upload path is the committed `.3mf` and contains no `dist/` component; `--scad` and
@@ -250,6 +259,234 @@ build descriptions unchanged.
 **Not done:** no prebuilt model has been published to MakerWorld yet — the first real one is the
 ScanSnap openGrid shelf. The upload path itself is shared with normal models from
 `resolve_upload_files()` onward, so only the file-resolution half is new and unexercised live.
+
+### Update 2026-08-12 — `new-model`, the first-time publish subcommand
+
+`makerworld_update.py` had two subcommands and **neither created a model**: `update` replaces an
+existing profile's file, `new-profile` adds a profile to an already-published model. Creating the
+listing itself was the by-hand flow documented under "Publish flow (first-time upload)" below.
+`new-model` automates that flow.
+
+**Where its values come from.** Not from the config directly — from the *built* description,
+`dist/<slug>/descriptions/makerworld_description.txt`. That file is already a flat
+`=== FIELD ===` document (see `templates/makerworld_base.md`) carrying every value the publish
+form asks for: MODEL NAME, LICENSE, CATEGORY, TAGS, SOURCE MODEL URLS, DESCRIPTION, PRINT PROFILE
+NAME/DESCRIPTION. So what gets published is exactly what the build produced — the same text
+`copy_description.py` puts on the clipboard for a by-hand publish, and it fails loudly if the
+description hasn't been built. The parsing lives in `scripts/description_fields.py`, shared by
+both scripts so the format is read in one place.
+
+**Guard:** a config that already has `project.makerworld_url` is refused (`--force` overrides) —
+that field existing *means* the listing exists, and `new-model` would create a second one.
+
+#### DOM mechanics of the publish wizard
+
+Everything below was worked out by driving the **live** wizard (chrome-devtools MCP against the
+real logged-in browser) from the first click through to a saved draft, dumping the DOM at each
+step — not read off the rendered page or guessed.
+
+Entry point is the navbar "Upload" menu → `/en/my/models/publish?type=original` (or
+`?type=remix`; there's a separate `/en/my/laser-and-cut-models/publish` we don't use). The
+`type` comes from `templates.sites.makerworld.model_type`. Three steps: **Upload → Model
+Information → Print Profile Information**.
+
+**Step 1 — Upload.** "Do you have a Bambu Studio file(.3mf) for this model?" → answer
+**"Yes (earn extra points reward)"** and the dropzones appear: `input[type=file][accept=".3mf"]`
+for the print profile, and a Raw Model Files input (long `accept` list including `.scad`) for the
+customizer source. `new-model` uploads the `.scad` by default for a SCAD model, since a
+first-time publish is the one moment that upload isn't a delete+reupload; `--no-scad` skips it,
+and a prebuilt model has no source to upload at all. Two other required questions live here —
+"Does this model include a Laser & Cut model?" and "Is the model you uploaded a CyberBrick
+model?" — both of which **default to No**, so the script deliberately leaves them alone.
+
+- **"Next Step" is never disabled.** It is clickable from the moment the page renders, with no
+  file attached at all. An earlier draft of this script waited for it to *become* enabled as its
+  "upload finished" signal, which would have clicked straight through with nothing uploaded —
+  caught by watching the live button's `disabled` property, which read `false` at t=0. The real
+  signal is the dropzone swapping its prompt for the file's own name plus size and a "Replace
+  File" control (`wait_for_upload()`).
+- **Leaving step 1 creates the draft immediately** — the URL becomes
+  `/en/my/models/drafts/<id>/edit`. From that point there is a listing on the account whether or
+  not anything is ever published; it shows up under Draft on `/en/@{username}/upload`.
+
+**Step 2 — Model Information.** MakerWorld's own markup does the addressing work: every section
+carries a semantic class next to its hashed emotion classes, and the photo sections carry
+validation-anchor classes (the `js-scroll-*` ones are what its validator scrolls to).
+
+| what | selector |
+| --- | --- |
+| Model Name | `.modelName input` (also `input[name="title"]`) |
+| Category | `.modelCategory input[role="combobox"]` |
+| Tags | `.modelTags input[role="combobox"]`, chips read back at `.modelTags .tagItem-content` |
+| License | `.modelLicense` (radios + a text summary) |
+| Description | `.modelDescription [contenteditable="true"]` |
+| Visibility | `.submitPrivate` (Public/Private radios) |
+| Model Covers | `.js-scroll-cover input[type="file"]` — two, 4:3 then 3:4 |
+| Model Pictures | `.js-scroll-designPictures input[type="file"]` (multiple) |
+| Model Origin (remix only) | `.modelOriginals` |
+
+- **Step 2 has no "Next Step" button** — that only exists on step 1. Its forward button is
+  **"Add Print Profile"**, which lands on `/en/my/models/drafts/<id>/createPrintProfile`.
+- **A blocked step transition is silent.** "Add Print Profile" simply does nothing while a
+  required field is missing; the complaint is inline `.Mui-error` helper text ("Please set the
+  model cover"). The script scrapes those and fails with them rather than hanging.
+- **There is no license picker.** MakerWorld derives the Creative Commons license from radio
+  questions and echoes back a human-readable name. All six rows were confirmed by answering the
+  live form and reading the result:
+
+  | config license | "Allow adaptations…?" | "Allow commercial uses…?" | MakerWorld shows |
+  | --- | --- | --- | --- |
+  | CC BY | Yes | Yes | Creative Commons Attribution |
+  | CC BY-NC | Yes | No | Creative Commons Attribution-Noncommercial |
+  | CC BY-SA | …as long as others share in the same way | Yes | Creative Commons Attribution-Share Alike |
+  | **CC BY-NC-SA** (what our models use) | …as long as others share in the same way | No | Creative Commons Attribution-Noncommercial-Share Alike |
+  | CC BY-ND | No | Yes | Creative Commons Attribution-NoDerivatives |
+  | CC BY-NC-ND | No | No | Creative Commons Attribution-Noncommercial-NoDerivatives |
+
+  A **third** question, "Allow sharing or redistributing of your work or its derivatives?",
+  appears only when adaptations is "No", and decides between a CC NoDerivatives license and
+  MakerWorld's own Standard Digital File License — the wizard's default state (all three No) is
+  SDFL, not CC. It's also worth knowing this form is *dynamic*: an existing model's edit page
+  shows the settled license as a read-only input holding the short `BY-NC-SA` form instead of the
+  long name, so the script reads whichever is present. Either way it **re-reads the summary and
+  fails on a mismatch** rather than trusting that the clicks landed.
+- The literal `Yes`/`No` labels appear in *both* license groups, so a page-wide role+name lookup
+  is ambiguous. Each radio is addressed by the question it answers instead:
+  `//*[text()="<question>"]/following::label[normalize-space(.)="<answer>"][1]`.
+- **Category and Tags are MUI autocompletes — typing alone sets nothing**, the dropdown option
+  (`li[role="option"]`) has to be clicked. Tags additionally commit on Enter, but an Enter landing
+  while a suggestion is highlighted commits *MakerWorld's* word rather than the typed one, so the
+  script reads the resulting chips back and warns on any mismatch.
+- **A Model Cover upload opens a crop dialog** ("Web/App cover 4:3", one Submit button). Until
+  Submit is clicked the cover is *not* set and the form keeps reporting "Please set the model
+  cover" — a silent trap, since the file input accepted the file perfectly happily. Only the 4:3
+  cover is required; the 3:4 App cover is optional, so the script fills it only when a second
+  `--cover` is given rather than cropping the same photo twice. Model Pictures and Print Profile
+  Pictures have **no** crop dialog.
+- Photo sections title themselves with a live count — "Model Pictures ( 1 / 16 )", "Print Profile
+  Pictures ( 2 / 37 )" — which is the only confirmation an image upload landed, so the script
+  waits on that.
+- **Model Origin (remix only)** is not a plain URL field: click "Add", paste the model URL, and
+  MakerWorld resolves it to a suggestion that must be clicked. Verified live — pasting
+  `.../1304337-opengrid-tile-generator` surfaced "openGrid - Tile Generator / BlackjackDuck".
+- **Model Name is filled LAST**, same hazard as `new-profile`'s `--name`: MakerWorld autofills it
+  from the uploaded file asynchronously and will overwrite an earlier value.
+
+**Step 3 — Print Profile Information** (`/createPrintProfile`):
+
+| what | selector |
+| --- | --- |
+| Print Profile Name | `input[name="profileTitle"]` (inside `.printProfileName`) |
+| Print Profile Pictures | `.printProfilePicture input[type="file"]` |
+| Print Profile Description | `.printProfileDescription [contenteditable="true"]` |
+| Guidelines checkbox | `input[name="instanceSetting.isPrinterTested"]` |
+
+- The name field arrives **already auto-filled** from the .3mf's slicer settings (it read "0.2mm
+  layer, 2 walls, 15% infill" by the time the step opened), which is exactly the race
+  `new-profile` was bitten by — so it's filled last here too.
+- One Print Profile Picture is inherited from Model Pictures (the count opens at 1, not 0).
+- Printer Compatibility arrives with **every** printer checked and Print Plates renders itself
+  from the .3mf; both are left alone.
+
+#### Descriptions: pasted as HTML, not typed
+
+The description is markdown, and CKEditor ignores `fill()` — but *typing* it would publish
+literal `##` and `**`. Instead the script converts the markdown to HTML (the same
+`markdown.markdown(..., extensions=['sane_lists'])` call `copy_description.py` uses) and
+dispatches a synthetic `paste` event carrying `text/html`:
+
+```js
+const data = new DataTransfer();
+data.setData('text/html', html);
+element.dispatchEvent(new ClipboardEvent('paste', {clipboardData: data, bubbles: true, cancelable: true}));
+```
+
+Verified against the live CKEditor on the test fixture's edit page: `<h2>`, `<strong>` and
+`<ul><li>` all survive as real editor blocks, exactly as a human pasting from
+`copy_description.py` would get. Two details that matter: paste inserts **at the cursor**, so the
+editor is select-all'd first (otherwise a retry interleaves with the previous attempt), and the
+script asserts a chunk of the description is actually present afterwards — a silently-empty
+description would otherwise only surface once the model was published.
+
+#### What `new-model` deliberately does not do
+
+State this plainly rather than letting the next person discover it mid-publish:
+
+- **It cannot make a model go live without real print photos.** MakerWorld's moderation rejects
+  renders ("System detected no real life photo") — see the photo section below — and nothing in
+  the automation changes that. `--cover`/`--photo` take paths to *your* photos; with none given
+  the script warns and the publish is expected to land in verify-failed. A model with only
+  OpenSCAD renders can be driven all the way to a filled-in draft, and no further.
+- **It does not touch Model Videos, Documentation, the Exclusive Model Program, or Printer
+  Compatibility.** Compatibility arrives fully checked and is left that way; the rest are
+  optional and stay empty.
+- **It sets one print profile** — the one in the uploaded `.3mf`. A multi-profile model's other
+  profiles are still added afterwards with `new-profile`.
+- **It doesn't write the ids back into the config.** It prints `makerworld_url` and
+  `makerworld_profile_id` for you to paste in, the same as `new-profile` does.
+- **It won't touch an already-published model.** A config with `project.makerworld_url` is
+  refused unless `--force`, because a second run would create a duplicate listing rather than
+  update the existing one.
+
+#### `--draft`: stop one click short
+
+`--draft` fills the entire wizard and clicks **"Save to draft"** instead of Publish. Nothing
+enters the verification queue and nothing goes live; the draft is listed under
+`/en/@{username}/upload` for a human to check over and publish by hand. This is the safe default
+for a first real use, and it's how this subcommand was rehearsed.
+
+#### How far this was actually rehearsed — and what is still unexercised
+
+Jonathan's call (2026-08-12) was to go **no further than draft**, so the rehearsal stopped one
+click short of Publish on purpose.
+
+**Exercised for real, against live MakerWorld, on the disposable prebuilt fixture**
+(`model_pages/_test_fixture_prebuilt/`, whose committed `.3mf` was the upload): the whole wizard
+start to finish, ending in a saved draft, with `Published Models (8)`, `Verifying (0)` and
+`Failed (0)` unchanged throughout. First by hand through chrome-devtools MCP — which is what
+produced every selector, the license table, the crop dialog, the "Add Print Profile" transition,
+the `profileTitle` autofill and the never-disabled "Next Step" above — and then **by the script
+itself**, `new-model _test_fixture_prebuilt --private --draft --cover … --photo …`, in ~26s of
+browser time with no warnings.
+
+The saved draft was then re-opened and read back field by field: Model Name "Prebuilt Test
+Fixture" (ours, not MakerWorld's autofill), Category Organizers, tag `test`, license "Creative
+Commons Attribution-Noncommercial-Share Alike", Visibility Private, cover set, Model Pictures
+1/16, Print Profile Pictures 2/37 with both thumbnails, guidelines checkbox ticked, Print Plates
+(1), no validation errors — and the description present as real editor blocks (four `<h2>`s,
+`<strong>`, 1300 chars).
+
+Three bugs the live runs caught that reading the code would not have:
+
+- `Locator.evaluate(fn, arg)` passes `(element, arg)`, not a single array — the paste helper's
+  `([element, html]) => …` signature blew up with "object is not iterable" the first time it ran.
+- Waiting for a photo section's count to be merely **non-zero** passes instantly on the wrong
+  photo: Print Profile Pictures opens at 1, having inherited a Model Picture, so the check cleared
+  before our upload landed. It now records the count first and waits for it to *rise*
+  (`upload_photos()`), which the next run showed doing exactly that: `1 -> 2`.
+- (Before those, the never-disabled "Next Step" described above.)
+
+**One nuance worth knowing, not a bug:** bullet lists in a description don't survive as lists.
+`markdown.markdown(..., extensions=['sane_lists'])` needs a blank line before a list that follows
+a paragraph, and the section templates don't leave one, so `- item` lines render as plain text.
+This is the *existing* behaviour of `copy_description.py`, shared through
+`description_fields.markdown_to_html()` — i.e. publishing via `new-model` produces exactly what
+pasting from the clipboard by hand produces. Fixing it means putting a blank line before lists in
+`templates/sections/`, which changes every model's copy, so it's deliberately left alone here.
+
+**Not exercised:**
+- **The Publish path.** `poll_verification()`, `find_new_model_id()` and `find_new_profile_id()`
+  are wired up for `new-model` but nothing has been published through it, so the
+  verification-queue and id-scraping half is still unproven for this subcommand. (Both of those
+  finders are shared with, and proven by, `new-profile`.)
+- **The `--scad` raw-file upload.** Only a prebuilt model was rehearsed, and a prebuilt model has
+  no customizer source. `wait_for_raw_file_upload()` is written against the observed DOM (an
+  uploaded raw file becomes a renamable text input holding the stem) but has never run.
+- **The remix path.** The fixture is `model_type: original`, so `add_model_origins()` hasn't run
+  inside a real publish — only the underlying interaction was confirmed by hand on an existing
+  model's edit page (paste URL → click the resolved suggestion).
+- **Unattended running is not a thing.** Every run needs someone to click Chrome's "Allow remote
+  debugging?" popup, same as `update`/`new-profile`.
 
 ## openGrid Beam: Full/Lite split into two print profiles
 
@@ -446,6 +683,14 @@ mechanics:
   has to be at the keyboard to click Approve each time the script runs.
   There's also a persistent "automated test software" banner while
   connected — cosmetic only.
+- **A stale `DevToolsActivePort` is the confusing failure** (hit on 2026-08-12). Chrome does not
+  rewrite that file when it restarts, and it reuses port 9222 — so the port in the file is still
+  correct and the TCP connection succeeds, while the `/devtools/browser/{uuid}` path belongs to a
+  long-dead session. The symptom is `connect_over_cdp` hanging until timeout rather than any
+  useful error, and since this mode serves no `/json/version`, there's no way to discover the
+  current uuid programmatically. Fix: un-check and re-check the box at
+  `chrome://inspect/#remote-debugging`, which rewrites the file. `connect_chrome()` now says so
+  in its error, and reports how old the file is.
 - The script only ever opens/closes its own new tab (`context.new_page()`
   / `page.close()`) — it must never call `context.close()` or
   `browser.close()`, since this is the user's real browser with their real
@@ -543,6 +788,9 @@ later in an async moderation pass (see below) and lands in "Failed", not
 "Verifying" or "Published".
 
 ## Publish flow (first-time upload)
+
+*Automated as of 2026-08-12 — see "Update 2026-08-12" above for the `new-model` subcommand and
+the DOM mechanics. What follows is the by-hand flow it drives.*
 
 From the navbar "Upload" button → "3D remix model" (or "3D original model"):
 
