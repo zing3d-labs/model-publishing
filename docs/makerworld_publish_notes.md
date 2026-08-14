@@ -507,10 +507,58 @@ itself is fine to ship, but two things needed care:
   2-extended-end styles, across all 7 lengths (2-8u) and both grid versions
   (Full/Lite) — 28 new variants, 42 total with the original 14.
 
-Building all 42 into one `.3mf` failed: **Bambu Studio supports a maximum
-of 36 plates per `.3mf`** (`stls_to_3mf.py` raises `ValueError` on pack,
-after all 42 STLs had already rendered fine individually — it's purely a
-packing-step limit). Resolved by splitting along the grid-version axis,
+## Two hard limits on what can go in a packed `.3mf`
+
+### 1. At most 36 plates
+
+Building all 42 beam variants into one `.3mf` failed: **Bambu Studio
+supports a maximum of 36 plates per `.3mf`** (`stls_to_3mf.py` raises
+`ValueError` on pack, after all 42 STLs had already rendered fine
+individually — it's purely a packing-step limit).
+
+### 2. Nothing may touch the bed exclusion zone
+
+Found the hard way on the facade republish (2026-08-14), which MakerWorld
+rejected outright with:
+
+> `[Plate 34]: Object conflicts were detected. Please verify the slicing of
+> all plates in Bambu Studio before uploading.`
+
+The P1S profile we embed in `Metadata/project_settings.config` declares a
+dead corner the toolhead can't reach:
+
+```
+printable_area   = (0,0) (256,0) (256,256) (0,256)
+bed_exclude_area = (0,0) (18,0) (18,28) (0,28)     # 18 x 28mm, front-left
+```
+
+`stls_to_3mf.py` centres each part in its plate cell, so a centred part
+overlaps that corner as soon as it is **wider than 220 and deeper than
+200** — and Bambu Studio then refuses the plate ("too close to exclusion
+area"). The packer now offsets such parts clear of the zone (+x preferred,
+since 18 < 28; +y as fallback) and raises at pack time if neither fits,
+rather than emitting a plate that gets rejected after a full build has run.
+
+Two traps worth knowing:
+
+- **MakerWorld reports only the first offending plate**, so its error
+  understates the problem. The facade upload named plate 34 while three
+  plates (8x8, 8x9, 9x9) were actually bad. Open the `.3mf` in Bambu
+  Studio to see them all.
+- **Its plate numbering need not match the file's.** MakerWorld reorders
+  plates — the previously published facade package starts at 3x7 — so
+  "plate N" is not reliably the Nth `<plate>` in
+  `Metadata/model_settings.config`.
+
+Some sizes are simply impossible rather than misplaced: a 252 x 252mm part
+needs 270mm in x or 280mm in y to clear the corner on a 256mm bed, so
+`facade_lite_9x9` cannot be published at all. That is why the facade ships
+35 plates, not 36 — a constraint that predates this repo and was rediscovered
+here only because the config's header comment claimed otherwise.
+
+## Splitting a model that exceeds the plate limit
+
+Resolved by splitting along the grid-version axis,
 which was already the natural print-profile boundary:
 
 - `model_pages/opengrid_beam/build_config.yaml` — Full (6.8mm) only, 21
@@ -861,6 +909,45 @@ wrongly conclude verification already passed. `scripts/makerworld_update.py`'s
 queue before polling for it to clear, specifically to avoid this. If you're
 checking by hand (e.g. via chrome-devtools MCP) right after a Publish click,
 give it a few seconds before trusting an empty Verifying list.
+
+**…but that wait is capped too tightly, and the cap bites.** On the facade
+republish (2026-08-14) the enqueue lag was about 65s against
+`ENQUEUE_TIMEOUT_S = 60`, so the script raised *"'openGrid Facade' never
+showed up at …/verifying within 60s of clicking Confirm"* on a publish that
+had in fact submitted cleanly and went on to verify and go live. **A raised
+`UpdateError` from that specific check does NOT mean the publish failed** —
+it means the script stopped watching. Confirm the real outcome before
+reacting, and never re-run the update on the strength of that error alone;
+a blind retry risks a duplicate publish and a duplicate user notification.
+Raising the timeout to ~180s is the obvious fix and is not yet done.
+
+### Establishing what actually happened after an ambiguous update
+
+Reading the UI is not enough — the profile edit page shows the *uploaded*
+file, which looks identical whether or not it ever published, and plate
+count and rounded file size can match between old and new. Two checks
+settle it:
+
+1. `https://makerworld.com/en/@{username}/verify-failed` — the rejection
+   queue, **with a stated reason**. Note the URL: `/failed` 404s.
+2. Download what the site is actually serving and inspect the geometry.
+   From inside the logged-in page (so cookies apply):
+
+   ```js
+   await fetch('/api/v1/design-service/instance/{profileId}/f3mf',
+               {credentials: 'include'})   // -> {name, url}
+   ```
+
+   That returns a signed CDN URL, valid ~300s, which `curl` can fetch.
+   (The sibling endpoints `/instance/{id}` and `/model/{id}/profiles` 404.)
+
+   **Compare geometry, not bytes.** MakerWorld re-processes an upload and
+   adds slice previews and pick images, so the served `.3mf` is never
+   byte-identical to what was sent — the facade's was 5.08MB served against
+   3.65MB uploaded. Plate count plus connected-body count per object is the
+   check that actually discriminates. This is also the most reliable way to
+   recover a model's *published* geometry as a baseline, and it beats a
+   local `dist/` copy, which `clean_before_build` will happily wipe.
 
 ## Test fixture reference
 

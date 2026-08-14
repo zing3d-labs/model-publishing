@@ -23,11 +23,58 @@ from typing import List, Tuple, Optional
 PLATE_SPACING = 307.2   # mm between plate centers
 FIRST_PLATE_X = 128.0
 FIRST_PLATE_Y = 128.0
+BED_SIZE = 256.0
+
+# Front-left corner the toolhead can't reach, from bed_exclude_area in the P1S
+# profile we embed in Metadata/project_settings.config: (0,0) (18,0) (18,28) (0,28).
+# Anything overlapping it makes Bambu Studio refuse the plate ("too close to
+# exclusion area"), and MakerWorld rejects the whole upload on that basis --
+# which is exactly what happened to the facade's 8x8/8x9/9x9 plates, since a
+# centered part intrudes as soon as it is wider than 220 and deeper than 200.
+BED_EXCLUDE_X = 18.0
+BED_EXCLUDE_Y = 28.0
+EXCLUDE_MARGIN = 1.0    # keep a hair clear of the boundary rather than touching it
 
 
 def plate_cols(n: int) -> int:
     """Number of columns Bambu Studio uses for n plates: ceil(sqrt(n)), max 6."""
     return min(6, math.ceil(math.sqrt(n)))
+
+
+def plate_offset(width: float, depth: float, name: str = '') -> Tuple[float, float]:
+    """Where to sit a width x depth part within its plate, as an offset from the
+    plate center.
+
+    Centering is the obvious choice and is what we do whenever it's legal, but a
+    part big enough to reach the front-left exclusion corner has to be nudged off
+    center or Bambu Studio (and then MakerWorld) rejects the plate. Nudging +x is
+    preferred over +y because the exclusion zone is shallower in x (18 vs 28), so
+    it costs less of the bed.
+
+    Raises ValueError when no legal position exists, rather than emitting a plate
+    that is guaranteed to be rejected after the whole build has run.
+    """
+    half_w, half_d = width / 2, depth / 2
+    min_x, min_y = FIRST_PLATE_X - half_w, FIRST_PLATE_Y - half_d
+
+    # Clear of the corner already? Then leave it centered.
+    if min_x >= BED_EXCLUDE_X or min_y >= BED_EXCLUDE_Y:
+        return 0.0, 0.0
+
+    shift_x = (BED_EXCLUDE_X + EXCLUDE_MARGIN) - min_x
+    if FIRST_PLATE_X + half_w + shift_x <= BED_SIZE:
+        return shift_x, 0.0
+
+    shift_y = (BED_EXCLUDE_Y + EXCLUDE_MARGIN) - min_y
+    if FIRST_PLATE_Y + half_d + shift_y <= BED_SIZE:
+        return 0.0, shift_y
+
+    raise ValueError(
+        f"{name or 'part'} is {width:.1f} x {depth:.1f}mm and cannot be placed on a "
+        f"{BED_SIZE:.0f}mm bed: clearing the {BED_EXCLUDE_X:.0f} x {BED_EXCLUDE_Y:.0f}mm "
+        f"front-left exclusion zone would need {BED_EXCLUDE_X + width:.1f}mm in x or "
+        f"{BED_EXCLUDE_Y + depth:.1f}mm in y. Drop this variant from the build config."
+    )
 
 
 # ── PNG generation ───────────────────────────────────────────────────────────
@@ -73,11 +120,13 @@ def parse_stl(filepath: str):
 
     z_min = min(v[2] for v in vertices) if vertices else 0.0
     if vertices:
-        x_center = (min(v[0] for v in vertices) + max(v[0] for v in vertices)) / 2
-        y_center = (min(v[1] for v in vertices) + max(v[1] for v in vertices)) / 2
+        x_lo, x_hi = min(v[0] for v in vertices), max(v[0] for v in vertices)
+        y_lo, y_hi = min(v[1] for v in vertices), max(v[1] for v in vertices)
+        x_center, y_center = (x_lo + x_hi) / 2, (y_lo + y_hi) / 2
+        width, depth = x_hi - x_lo, y_hi - y_lo
     else:
-        x_center = y_center = 0.0
-    return vertices, triangles, z_min, x_center, y_center
+        x_center = y_center = width = depth = 0.0
+    return vertices, triangles, z_min, x_center, y_center, width, depth
 
 
 # ── XML generators ───────────────────────────────────────────────────────────
@@ -149,7 +198,7 @@ def make_object_model(vertices, triangles, inner_id: int):
 
 
 def make_main_model(n: int, z_offsets: List[float], xy_centers: List[Tuple[float, float]],
-                    cols: int = 0):
+                    cols: int = 0, plate_offsets: Optional[List[Tuple[float, float]]] = None):
     """XML for 3D/3dmodel.model — wrapper objects + build items."""
     build_uuid = str(uuid.uuid4())
     today = date.today().isoformat()
@@ -191,8 +240,9 @@ def make_main_model(n: int, z_offsets: List[float], xy_centers: List[Tuple[float
         item_uuid = str(uuid.uuid4())
         col = i % num_cols
         row = i // num_cols
-        cx = FIRST_PLATE_X + col * PLATE_SPACING
-        cy = FIRST_PLATE_Y - row * PLATE_SPACING
+        off_x, off_y = plate_offsets[i] if plate_offsets else (0.0, 0.0)
+        cx = FIRST_PLATE_X + col * PLATE_SPACING + off_x
+        cy = FIRST_PLATE_Y - row * PLATE_SPACING + off_y
         tx = cx - xy_centers[i][0]
         ty = cy - xy_centers[i][1]
         z = z_offsets[i]
@@ -299,12 +349,20 @@ def pack(stl_files: List[str], output_path: str,
     meshes = []
     for stl_path in stl_files:
         print(f"  Parsing: {Path(stl_path).name}")
-        verts, tris, z_min, x_center, y_center = parse_stl(stl_path)
-        meshes.append((verts, tris, z_min, x_center, y_center))
+        verts, tris, z_min, x_center, y_center, width, depth = parse_stl(stl_path)
+        meshes.append((verts, tris, z_min, x_center, y_center, width, depth))
 
     z_offsets = [-m[2] for m in meshes]   # -z_min so model sits on bed
     xy_centers = [(m[3], m[4]) for m in meshes]
     face_counts = [len(m[1]) for m in meshes]
+    plate_offsets = [
+        plate_offset(m[5], m[6], Path(stl_path).name)
+        for m, stl_path in zip(meshes, stl_files)
+    ]
+    for (ox, oy), stl_path in zip(plate_offsets, stl_files):
+        if ox or oy:
+            print(f"  Nudged {Path(stl_path).name} by ({ox:+.1f}, {oy:+.1f})mm "
+                  f"to clear the bed exclusion zone")
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
@@ -314,9 +372,10 @@ def pack(stl_files: List[str], output_path: str,
         zf.writestr('3D/_rels/3dmodel.model.rels', make_model_rels(len(stl_files)))
         cols = plate_cols(len(stl_files))
         zf.writestr('3D/3dmodel.model',
-                    make_main_model(len(stl_files), z_offsets, xy_centers, cols))
+                    make_main_model(len(stl_files), z_offsets, xy_centers, cols,
+                                    plate_offsets))
 
-        for i, (verts, tris, _, __, ___) in enumerate(meshes):
+        for i, (verts, tris, *_rest) in enumerate(meshes):
             inner_id = 2 * i + 1
             zf.writestr(f'3D/Objects/object_{i+1}.model',
                         make_object_model(verts, tris, inner_id))
