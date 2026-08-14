@@ -910,16 +910,24 @@ queue before polling for it to clear, specifically to avoid this. If you're
 checking by hand (e.g. via chrome-devtools MCP) right after a Publish click,
 give it a few seconds before trusting an empty Verifying list.
 
-**…but that wait is capped too tightly, and the cap bites.** On the facade
-republish (2026-08-14) the enqueue lag was about 65s against
-`ENQUEUE_TIMEOUT_S = 60`, so the script raised *"'openGrid Facade' never
-showed up at …/verifying within 60s of clicking Confirm"* on a publish that
-had in fact submitted cleanly and went on to verify and go live. **A raised
-`UpdateError` from that specific check does NOT mean the publish failed** —
+**…and that wait used to be capped too tightly.** On the facade republish
+(2026-08-14) the enqueue lag was about 65s against a then-`ENQUEUE_TIMEOUT_S
+= 60`, so the script raised *"'openGrid Facade' never showed up at
+…/verifying within 60s of clicking Confirm"* on a publish that had in fact
+submitted cleanly and went on to verify and go live — a hard cutoff sitting
+right on top of the real figure. `ENQUEUE_TIMEOUT_S` is now **180s**, and
+the error raised when the deadline does pass says the outcome is *unknown*
+rather than failed.
+
+That distinction still matters, because the timeout can never be conclusive:
+**a raised `UpdateError` from that check does NOT mean the publish failed** —
 it means the script stopped watching. Confirm the real outcome before
 reacting, and never re-run the update on the strength of that error alone;
 a blind retry risks a duplicate publish and a duplicate user notification.
-Raising the timeout to ~180s is the obvious fix and is not yet done.
+The error text now points at the same three checks written up below, and the
+debug screenshot saved on failure is the `/verifying` page as it looked at
+the deadline — on the facade run that screenshot already showed the item
+queued, so read it first.
 
 ### Establishing what actually happened after an ambiguous update
 
