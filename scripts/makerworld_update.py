@@ -81,7 +81,13 @@ DEFAULT_USERNAME = 'jonnydev13'
 VERIFY_POLL_INTERVAL_S = 10
 VERIFY_TIMEOUT_S = 300
 ENQUEUE_POLL_INTERVAL_S = 3
-ENQUEUE_TIMEOUT_S = 60
+# Generous on purpose. Measured enqueue lag on the 2026-08-14 facade republish was
+# ~65s against a then-60s cap, so the old value sat right on top of the real figure --
+# the worst possible place for a hard cutoff, since it turns a normal publish into a
+# reported failure. Giving up here is ambiguous rather than conclusive (see
+# poll_verification), and the cost of a wrong "failure" is a retry that duplicates a
+# publish, so buy the margin.
+ENQUEUE_TIMEOUT_S = 180
 UPLOAD_TIMEOUT_MS = 180_000
 
 # MakerWorld has no license picker. It derives the Creative Commons license
@@ -352,9 +358,26 @@ def poll_verification(page, username: str, model_name: str):
             break
         if time.monotonic() >= enqueue_deadline:
             raise UpdateError(
-                f"'{model_name}' never showed up at {verifying_url} within "
-                f"{ENQUEUE_TIMEOUT_S}s of clicking Confirm. Check manually -- Confirm may not "
-                "have actually submitted, or the queue lag is longer than expected."
+                f"UNKNOWN OUTCOME: '{model_name}' had not appeared at {verifying_url} "
+                f"{ENQUEUE_TIMEOUT_S}s after clicking Confirm.\n"
+                "This does NOT mean the publish failed -- it means the script stopped"
+                " watching. Confirm may have submitted cleanly and the queue lag simply ran"
+                " long, in which case the model verifies and goes live on its own.\n"
+                "DO NOT re-run this script to 'retry' before establishing what happened: a"
+                " second submit risks a duplicate publish and a duplicate notification to"
+                " everyone using this model's print profiles, and neither can be taken back.\n"
+                "To disambiguate:\n"
+                "  0. Read the debug screenshot saved alongside this error first -- it is the"
+                " Verifying page as it looked at the deadline, so the item may already be"
+                " visible in it.\n"
+                f"  1. {verifying_url} -- if it is queued there, it submitted fine; wait.\n"
+                f"  2. {failed_url} -- a genuine rejection lands here"
+                " with a stated reason (note the URL: /failed 404s).\n"
+                "  3. Compare the geometry the site actually serves against what was sent:"
+                " fetch /api/v1/design-service/instance/{profileId}/f3mf from inside the"
+                " logged-in page for a signed CDN url, then compare plate count and connected"
+                " bodies per object -- NOT bytes, MakerWorld re-processes every upload.\n"
+                "Full procedure: docs/makerworld_publish_notes.md."
             )
         time.sleep(ENQUEUE_POLL_INTERVAL_S)
 
