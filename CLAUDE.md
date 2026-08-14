@@ -119,8 +119,11 @@ python scripts/copy_description.py model_pages/<model>/build_config.yaml makerwo
 - Collection templates live in `templates/sections/collections/{collection}/`
 - All openGrid models must have `collection: "opengrid"` in their build config `project:` block
 - **Never add a `related_models` section to any model unless the user explicitly specifies which models to link**
-- Canonical sections (makerworld): model_description, intro, print_settings, downloads, assembly, collection, support_project, related_models
-- Canonical sections (printables): model_description, intro, print_settings, downloads, assembly, attribution, collection, support_project, related_models
+- Canonical sections (makerworld): model_description, intro, variants, print_settings, downloads, assembly, attribution, collection, support_project, related_models, changelog
+- Canonical sections (printables): model_description, intro, variants, print_settings, downloads, assembly, attribution, collection, support_project, related_models, changelog
+- `attribution` has no shared or site-level default, so it renders only for a model that writes
+  its own `sections/attribution.md` — that's where a licence *condition* (crediting a remixed
+  source whose licence requires it) goes, rather than buried in `intro`
 
 ## Code Conventions
 

@@ -1,0 +1,190 @@
+# openGrid Inbox Build Configuration
+# Wall-mounted paper / mail / file inbox that hangs on an openGrid wall via
+# openConnect slots cut into its back panel.
+#
+# One print profile, nine plates: three paper sizes (US Letter / A4 / A5)
+# crossed with the three perforation patterns (Hex / Square / None).
+#
+# US Letter and A4 both snap to the same 224 x 224mm outer panel and the same
+# 219.2mm pocket -- the 28mm tile snap absorbs the 5.9mm sheet-width and 17.6mm
+# sheet-height difference -- so they differ only in front panel height
+# (153.7 vs 163.4mm) and depth (89.1 vs 91.2mm). Both are still shipped: the
+# front panel height is what decides how much of the sheet stays readable.
+#
+# No print-orientation override: the .scad builds the part as-mounted (+Y at
+# the wall, +Z up), which is already the right way to print it -- floor on the
+# bed, back panel standing. Measured on the US Letter hex plate, that leaves
+# 79.6cm2 of >45deg overhang (3.6% of the surface, all single-cell bridges);
+# laying it back-panel-down instead would make the whole perforated front
+# panel a ceiling 89mm up, at 401.9cm2 (18.2%). Slot_Entry_Ramp_Flip is left
+# at its default for the same reason -- it mirrors the slot ramps about X,
+# which changes nothing about overhang in this orientation.
+
+project:
+  name: "openGrid Inbox"
+  collection: "opengrid"
+  description: "Wall-mounted paper, mail, and file inbox that hangs on an openGrid wall using openConnect slots cut into its back panel. Sized for US Letter, A4, or A5 sheets, with a perforated front panel that cuts print time and material."
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-NC-SA 4.0"
+
+source:
+  input_file: "../../models/opengrid/parts/opengrid_inbox.scad"
+  libraries:
+    - "BOSL2/"
+
+variants:
+  # Hex honeycomb -- the default look, and the hero plate.
+  us_letter_hex:
+    name: "US Letter, Hex"
+    description: "US Letter portrait, hex honeycomb front and sides."
+    parameters:
+      Paper_Size: "US Letter"
+      Perforation_Pattern: "Hex"
+    outputs:
+      - format: "stl"
+        filename: "inbox_us_letter_hex.stl"
+
+  a4_hex:
+    name: "A4, Hex"
+    description: "A4 portrait, hex honeycomb front and sides."
+    parameters:
+      Paper_Size: "A4"
+      Perforation_Pattern: "Hex"
+    outputs:
+      - format: "stl"
+        filename: "inbox_a4_hex.stl"
+
+  a5_hex:
+    name: "A5, Hex"
+    description: "A5 portrait, hex honeycomb front and sides."
+    parameters:
+      Paper_Size: "A5"
+      Perforation_Pattern: "Hex"
+    outputs:
+      - format: "stl"
+        filename: "inbox_a5_hex.stl"
+
+  # Square lattice -- same geometry, straight-edged pattern.
+  us_letter_square:
+    name: "US Letter, Square"
+    description: "US Letter portrait, square lattice front and sides."
+    parameters:
+      Paper_Size: "US Letter"
+      Perforation_Pattern: "Square"
+    outputs:
+      - format: "stl"
+        filename: "inbox_us_letter_square.stl"
+
+  a4_square:
+    name: "A4, Square"
+    description: "A4 portrait, square lattice front and sides."
+    parameters:
+      Paper_Size: "A4"
+      Perforation_Pattern: "Square"
+    outputs:
+      - format: "stl"
+        filename: "inbox_a4_square.stl"
+
+  a5_square:
+    name: "A5, Square"
+    description: "A5 portrait, square lattice front and sides."
+    parameters:
+      Paper_Size: "A5"
+      Perforation_Pattern: "Square"
+    outputs:
+      - format: "stl"
+        filename: "inbox_a5_square.stl"
+
+  # Solid -- every panel closed.
+  us_letter_solid:
+    name: "US Letter, Solid"
+    description: "US Letter portrait, solid panels throughout."
+    parameters:
+      Paper_Size: "US Letter"
+      Perforation_Pattern: "None"
+    outputs:
+      - format: "stl"
+        filename: "inbox_us_letter_solid.stl"
+
+  a4_solid:
+    name: "A4, Solid"
+    description: "A4 portrait, solid panels throughout."
+    parameters:
+      Paper_Size: "A4"
+      Perforation_Pattern: "None"
+    outputs:
+      - format: "stl"
+        filename: "inbox_a4_solid.stl"
+
+  a5_solid:
+    name: "A5, Solid"
+    description: "A5 portrait, solid panels throughout."
+    parameters:
+      Paper_Size: "A5"
+      Perforation_Pattern: "None"
+    outputs:
+      - format: "stl"
+        filename: "inbox_a5_solid.stl"
+
+# Image generation settings
+images:
+  defaults:
+    resolution: [1920, 1080]
+    background: "white"
+    colorscheme: "DeepOcean"
+
+  # Renders are reference only -- MakerWorld requires real photos for the
+  # cover and gallery, so nothing here is uploaded.
+  views:
+    - variant: "us_letter_hex"
+      shots:
+        - name: "hero"
+          camera:
+            position: [520, -560, 400]
+            look_at: [0, 0, 0]
+          filename: "inbox_us_letter_hex_hero.png"
+        - name: "back"
+          camera:
+            position: [340, 620, 300]
+            look_at: [0, 0, 0]
+          filename: "inbox_us_letter_hex_back.png"
+
+# Modular template system
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "remix"
+      category: "Organizers"
+      tags: "opengrid, openconnect, inbox, paper, mail, organizer, wall mount, parametric, customizer"
+      source_urls:
+        - "https://makerworld.com/en/models/1179191-opengrid-wall-desk-mounting-framework-ecosystem"
+        - "https://makerworld.com/en/models/2257440-openconnect-opengrid-s-own-connector-system"
+      print_profile:
+        name: "0.2mm layer, 3 walls, 15% infill"
+        settings:
+          - "0.2mm layer height"
+          - "3 walls"
+          - "15% infill"
+          - "No supports required"
+          - "Print floor down, back panel standing -- as the plates are laid out"
+        notes: "The back panel carries the whole load through the openConnect slots, so it gets three walls rather than two. Everything else is a light part with a lot of open area."
+
+# Build pipeline settings
+build:
+  output_directory: "dist/"
+  clean_before_build: true
+
+  openscad:
+    executable: "openscad"
+    timeout: 300
+    additional_flags: []
+
+  render:
+    timeout: 120
+    additional_flags: ["--render"]
