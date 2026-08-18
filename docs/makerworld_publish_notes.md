@@ -115,11 +115,13 @@ the real openGrid Beam geometry change live.
 1. Test fixture has accumulated throwaway junk from rehearsals (3 print
    profiles, 4 comments/replies) — deliberately left alone, Private and
    disposable, not worth the cleanup trip. Ignore.
-2. The `--scad` delete+reupload path in the `update` subcommand is written
-   but not yet tested against the new connection approach. Worth a test run
-   against `_test_fixture --scad` before using it on beam (241 existing Customize
-   uses at last check — see "Not tested" note further down about existing
-   customizations).
+2. ~~The `--scad` delete+reupload path in the `update` subcommand is written
+   but not yet tested against the new connection approach.~~ **DONE — run live
+   against `_test_fixture` on 2026-08-18 and verified byte-for-byte. Found and
+   fixed a real locator bug in the process; see "Update 2026-08-18 — `--scad`
+   live-tested" below.** Still worth knowing before using it on beam (241
+   existing Customize uses at last check — see "Not tested" note further down
+   about existing customizations).
 3. ~~Basket (model `2505078`) needs the script extended for multiple print
    profiles before it can be used there — not started.~~ **Done.** The pipeline
    extension is built and verified (see "Update 2026-08-07" below), and all three
@@ -260,6 +262,47 @@ build descriptions unchanged.
 ScanSnap openGrid shelf. The upload path itself is shared with normal models from
 `resolve_upload_files()` onward, so only the file-resolution half is new and unexercised live.
 
+### Update 2026-08-09 — `--scad` live test staged (loose end #2)
+
+Everything up to the browser is done; the live run itself has **not happened yet** — it needs a
+human at the keyboard to approve Chrome's remote-debugging popup.
+
+> **Superseded 2026-08-18:** the run has since happened and passed. Keep reading for the fixture
+> rationale, but see "Update 2026-08-18 — `--scad` live-tested end to end" below for the outcome
+> (and the locator bug it caught).
+
+**Fixture prepared:** `model_pages/_test_fixture/test_fixture.scad` gained a new `/* [Lid] */`
+parameter group (`Lid_Thickness`, default `0`). The default of 0 is the point: geometry — and
+therefore the packed `.3mf` — is unchanged, which isolates the customizer source. If the live
+customizer shows a **Lid** section after the run, the raw `.scad` was genuinely replaced. Without
+a marker like this a clean exit only proves the script didn't throw, not that the new file landed.
+
+**Pre-flight done without a browser:** a full build of `_test_fixture` (flat) and
+`grid_basket/small` (multi-profile) both succeed, and `resolve_upload_files(..., need_scad=True)`
+resolves real on-disk files for each — `.3mf` plus the `_cpl`-stripped `.scad`. So the file
+resolution half of `--scad` is confirmed; only the browser half is untested.
+
+Watch out for a stale-branch trap here: this work started on the pre-PR-#10 main and
+"discovered" the artifact-naming bug that PR #10 had *already* fixed upstream (in the producer,
+`pack_3mf`, rather than the consumer). Two opposite fixes for one defect would have re-broken it.
+Rebase before concluding that something in this pipeline is broken.
+
+Side effect of PR #10 worth knowing before the next real upload: the packed `.3mf` is now named
+from the config slug, so the file MakerWorld shows end users changes for multi-profile models —
+beam Full uploads `opengrid_beam_full.3mf` where it previously uploaded `opengrid_beam.3mf`.
+Cosmetic, and arguably clearer now that profiles are split, but it *will* be visible on the
+listing the next time beam is updated.
+
+**To finish loose end #2** — Chrome running, logged into MakerWorld,
+`chrome://inspect/#remote-debugging` toggled on, and approve the popup when it appears:
+
+```bash
+python3 scripts/scad_builder.py model_pages/_test_fixture/build_config.yaml
+python3 scripts/makerworld_update.py update _test_fixture --no-notify --scad
+```
+
+Then confirm on the live listing that Customize still works, the model id / `designId` is
+unchanged, and the customizer shows the new **Lid** group.
 ### Update 2026-08-12 — `new-model`, the first-time publish subcommand
 
 `makerworld_update.py` had two subcommands and **neither created a model**: `update` replaces an
@@ -487,6 +530,72 @@ pasting from the clipboard by hand produces. Fixing it means putting a blank lin
   model's edit page (paste URL → click the resolved suggestion).
 - **Unattended running is not a thing.** Every run needs someone to click Chrome's "Allow remote
   debugging?" popup, same as `update`/`new-profile`.
+
+### Update 2026-08-18 — `--scad` live-tested end to end (loose end #2 CLOSED)
+
+Ran `python3 scripts/makerworld_update.py update _test_fixture --no-notify --scad` against the
+disposable fixture (model `3055595`, profile `3437877`). The path now works and is verified.
+
+Scope note, because two different things are spelled `--scad`: this is **`update --scad`**
+(`update_raw_model_file`, delete the existing raw file then reupload). It is *not* `new-model`'s
+raw-file upload (`wait_for_raw_file_upload`), which loose end #0 correctly still lists as
+unexercised — that is a separate function on the first-time-publish path and nothing here
+touches it.
+
+**Found and fixed a real bug — the reason this test was worth running.** The first live run
+died mid-flight with a Playwright strict-mode violation:
+
+```
+strict mode violation: get_by_role("button", name="Browse", exact=True) resolved to 2 elements
+```
+
+Two elements on the Edit Model page answer to the accessible name `Browse`: the dropzone
+(`<div role="button">`, the whole "Drag your files here" area) and the real `<button>` inside it.
+This had never fired before because the `--scad` path had only ever been driven by hand.
+
+Watch out for the obvious-looking fix, which is wrong: `button:text-is("Browse")` matches
+**nothing**, because `:text-is` matches the *smallest* element holding the text and MakerWorld
+nests the label in a couple of divs under the button. The fix that works is tag-scoping:
+`page.locator('button').filter(has_text='Browse')` — one match, the real button. Confirmed by
+probing the live page rather than by guessing a second time.
+
+Also worth knowing: that page has **8** `input[type=file]` elements, so "skip the click and
+call `set_input_files` on the file input" is not the easy shortcut it looks like.
+
+**The delete is edit-form state, not an immediate API call.** `update_raw_model_file` deletes the
+existing raw file *before* uploading the replacement, so a crash in between looks alarming — the
+screenshot shows an empty "Raw Model Files" dropzone. It is not: because `Publish` is never
+clicked on that path, closing the tab discards the deletion. Confirmed by probing the live model
+after two failed runs — the raw file was still there both times. So a mid-flight `--scad` failure
+leaves the model intact, and re-running is safe.
+
+**How this was verified** (do it this way, not by the script's exit status):
+
+1. The fixture's `.scad` carries a `/* [Lid] */` parameter group with `Lid_Thickness = 0`, which
+   changes no geometry. So the `.3mf` is unchanged and the *only* thing that can differ is the
+   customizer source — which makes the check unambiguous.
+2. Open the model page → `Customize` → the **Customizable** modal → `Customize` again. That
+   second click is easy to miss; the first only opens a modal listing the source file. MakerLab
+   then shows the parameter panel, which now reads `Dimensions` (Width, Depth, Height, Corner)
+   **plus `Lid`**. The Lid group exists only in the newly uploaded source.
+3. Best of all, the MakerLab URL carries a signed `scadUrl` query param pointing at the raw file
+   on the CDN. `curl` it (the signature is good for ~300s) and diff against
+   `dist/<model>/<stem>.scad`. It came back **byte-identical, same md5**.
+
+Point 3 is a genuinely better verification route than the `.3mf` procedure, and the difference
+matters: raw `.scad` files are stored as uploaded, so a **byte comparison is valid here**. That
+is the opposite of the `.3mf` rule elsewhere in this file, where MakerWorld re-processes every
+upload and adds slice previews, so bytes never match and only geometry can be compared.
+
+Note that the model detail API (`/api/v1/design-service/design/{id}`) does **not** expose a raw
+`.scad` download url — `designExtension.model_files[0]` gives the `modelName` and a thumbnail
+only. The signed url off the MakerLab launch is the way in.
+
+Neither `designId` nor the model id changed (`designId=3055595` in the customizer URL), and
+`Customize` still works, so the delete+reupload does not orphan the customizer. What remains
+genuinely untested is the thing the fixture cannot answer: what happens to the **241 existing
+Customize uses** on beam when its raw `.scad` is replaced. The fixture has no meaningful
+customization history, so that risk is unchanged by this test.
 
 ## openGrid Beam: Full/Lite split into two print profiles
 

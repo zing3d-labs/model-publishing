@@ -13,6 +13,14 @@ Height = 10; // [5:5:50]
 // Rounded corner radius (mm). 0 disables rounding.
 Corner_Radius = 3; // [0:1:10]
 
+// Marker section for the 2026-08-09 --scad delete+reupload test: a brand new
+// parameter group is the only unambiguous signal that the raw .scad on
+// MakerWorld was really replaced. Defaults to 0 so the default geometry (and
+// therefore the .3mf) is unchanged, isolating the customizer-source path.
+/* [Lid] */
+// Thickness of a solid lid on top (mm). 0 disables the lid.
+Lid_Thickness = 0; // [0:1:10]
+
 module rounded_box(w, d, h, r) {
     if (r <= 0) {
         cube([w, d, h]);
@@ -27,3 +35,7 @@ module rounded_box(w, d, h, r) {
 }
 
 rounded_box(Width, Depth, Height, Corner_Radius);
+
+if (Lid_Thickness > 0)
+    translate([0, 0, Height])
+        rounded_box(Width, Depth, Lid_Thickness, Corner_Radius);
