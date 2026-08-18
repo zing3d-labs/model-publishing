@@ -945,7 +945,14 @@ def update_raw_model_file(page, model_id, scad_path: Path, notify_message: str |
     else:
         logger.info("No existing raw model file found to delete -- this is a first-time upload")
 
-    browse_btn = page.get_by_role('button', name='Browse', exact=True)
+    # Two elements answer to the accessible name "Browse": the surrounding
+    # dropzone (a <div role="button"> covering the whole "Drag your files here"
+    # area) and the real <button> inside it, so get_by_role(name='Browse') dies
+    # on strict mode. Scoping by tag is what disambiguates -- note that
+    # 'button:text-is("Browse")' does NOT work, because :text-is matches the
+    # smallest element holding the text and MakerWorld nests the label in a
+    # couple of divs under the button.
+    browse_btn = page.locator('button').filter(has_text='Browse')
     with page.expect_file_chooser() as fc_info:
         browse_btn.click()
     fc_info.value.set_files(str(scad_path))
