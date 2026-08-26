@@ -16,7 +16,11 @@ project:
   license: "CC BY-NC-SA 4.0"
 
 source:
-  input_file: "../../../models/opengrid/kits/grid_basket/grid_basket.scad"
+  # The mw_ publishing entry point, not the bare library: it is the file that
+  # defines mw_plate_1..6() and the Render_Plate dispatch the plate renders
+  # below drive. grid_basket.scad holds the same decomposition under plain
+  # names and stays safe for other kits to include.
+  input_file: "../../../models/opengrid/kits/grid_basket/mw_grid_basket.scad"
   libraries:
     - "BOSL2/"
     - "QuackWorks/"

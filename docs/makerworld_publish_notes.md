@@ -616,6 +616,81 @@ itself is fine to ship, but two things needed care:
   2-extended-end styles, across all 7 lengths (2-8u) and both grid versions
   (Full/Lite) — 28 new variants, 42 total with the original 14.
 
+## Multi-plate models: the `plates:` block
+
+Most models are one part per variant, so one variant is one plate. A model
+whose product is *several parts that assemble* (the basket: a base, four
+walls, and a bag of beams and snaps) has no single-plate arrangement that
+fits a bed — laying every part flat in one arrangement gives a footprint
+that grows with the model, which is why all three basket profiles used to
+fail the bed-fit check at 309 / 454 / 622mm against a 256mm bed. The check
+was right; the output simply wasn't a plate.
+
+Such a model declares **`plates:` on the variant**, alongside `outputs:`:
+
+```yaml
+variants:
+  small_3x3x3:
+    parameters: {Basket_X_Units: 3, ...}
+    plates: [1, 2, 3, 4, 5, 6]
+    outputs:
+      - format: "stl"
+        filename: "grid_basket_small_3x3x3.stl"
+```
+
+- Each entry is rendered by setting `Render_Plate=N` in the SCAD source, so
+  the variant renders six times instead of once.
+- Every declared output is emitted per plate, with the plate number in the
+  name: `grid_basket_small_3x3x3_plate1.stl` … `_plate6.stl`. Those STLs
+  are the intermediates; the deliverable is still the single packed
+  `dist/<slug>/<slug>.3mf`, which now carries six plates named
+  `small_3x3x3_plate1` … `_plate6`.
+- A variant with no `plates:` key renders exactly as before — one pass, no
+  suffix, plate named for the variant. Nothing about single-part models
+  changed.
+- `stls_to_3mf.pack()` needed no change at all: it already did one STL per
+  plate. It just gets a longer list.
+
+**Why `plates:` and not more `variants:`.** Overloading `variants:` would
+have worked with zero code change, but variants reach the description
+template context and each carries user-facing copy — so the generated
+"Available Print Profiles" copy would start advertising *plates* to readers
+as if they were things to choose. A variant is what a user picks; a plate is
+only how one variant is split for printing, and it should never surface in
+published copy.
+
+**The SCAD side.** `Render_Plate` is not a build-system invention; it is the
+dispatch parameter of an `mw_<model>.scad` publishing entry point, whose
+whole job is to name the plates `mw_plate_1()` … `mw_plate_N()` the way
+MakerWorld's Parametric Model Maker expects, plus an `mw_assembly_view()`
+preview PMM shows but leaves out of the exported 3MF. `source.input_file`
+must point at that `mw_` file, not at the bare geometry library:
+
+```yaml
+source:
+  input_file: "../../../models/opengrid/kits/grid_basket/mw_grid_basket.scad"
+```
+
+The two consumers — our local build (renders N STLs, packs them) and
+MakerWorld (runs `mw_plate_1..N()` at the user's own parameters) — read the
+*same* decomposition out of the `.scad`. That is deliberate: if the plates
+were written down twice, once in the config and once in the SCAD, they would
+drift, and the file users download from the listing would quietly stop
+matching the one uploaded as the print profile — a bug only findable by
+downloading both and comparing.
+
+Two consequences to weigh per model:
+
+- **Multi-plate costs the listing its STL downloads.** MakerWorld's own
+  release note is explicit: a script defining `mw_plate_N()` cannot offer
+  STL downloads. For a parametric part people may want to remix, that is a
+  real product decision, not a formality.
+- **`mw_plate_*` is contagious**, which is why it lives in `mw_<model>.scad`
+  and never in the geometry library. `scad-compiler` inlines local includes,
+  so any model including a library that carried those modules would inherit
+  them into its own compiled Customizer and silently flip to multi-plate
+  mode — losing *that* model's STL downloads.
+
 ## Two hard limits on what can go in a packed `.3mf`
 
 ### 1. At most 36 plates
@@ -624,6 +699,11 @@ Building all 42 beam variants into one `.3mf` failed: **Bambu Studio
 supports a maximum of 36 plates per `.3mf`** (`stls_to_3mf.py` raises
 `ValueError` on pack, after all 42 STLs had already rendered fine
 individually — it's purely a packing-step limit).
+
+Since `plates:` exists the cap binds on two axes, not one: a config with V
+variants each split into P plates packs V x P plates. The basket is safe
+(one variant per profile, six plates), but a model that is both multi-size
+and multi-plate reaches 36 far sooner than a variant count suggests.
 
 ### 2. Nothing may touch the bed exclusion zone
 
