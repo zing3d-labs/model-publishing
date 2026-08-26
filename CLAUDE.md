@@ -68,7 +68,7 @@ python scripts/copy_description.py model_pages/<model>/build_config.yaml makerwo
 ```
 
 ## Build System Notes
-- `scripts/scad_builder.py` orchestrates: compile → generate variants (STL/3MF) → render images → template descriptions
+- `scripts/scad_builder.py` orchestrates: compile → generate variants (STL/3MF, one render per plate for a variant with `plates:`) → render images → template descriptions
 - Build configs in `model_pages/*/build_config.yaml` (single-profile) or
   `model_pages/*/<profile>/build_config.yaml` (multi-profile)
 - `scripts/model_config.py` merges a multi-profile model's `model.yaml` into each profile's
@@ -77,6 +77,29 @@ python scripts/copy_description.py model_pages/<model>/build_config.yaml makerwo
 - Paths inside a `model.yaml` resolve from a *profile* subdirectory, one level deeper than the
   file itself
 - `model.yaml`'s `profiles:` list is what lets generated copy describe a model's other profiles
+
+### Multi-plate models (`plates:`)
+- A model that prints as several parts declares `plates:` on the variant, next to
+  `outputs:`. Each entry renders the source once with `Render_Plate=N`
+  ```yaml
+  variants:
+    small_3x3x3:
+      parameters: {Basket_X_Units: 3, ...}
+      plates: [1, 2, 3, 4, 5, 6]
+      outputs: [{format: 'stl', filename: 'grid_basket_small_3x3x3.stl'}]
+  ```
+- Every output is emitted per plate (`..._plate1.stl` … `_plate6.stl`); those are
+  intermediates. The deliverable is still the one packed `dist/<slug>/<slug>.3mf`,
+  now carrying six plates. A variant with no `plates:` key behaves exactly as before
+- **variants ≠ plates.** A variant is what a user chooses and its copy reaches the
+  description templates; a plate is only how one variant is split for printing.
+  Never express plates as variants — the generated copy would advertise them
+- `source.input_file` must point at the `mw_<model>.scad` publishing entry point
+  (which defines `mw_plate_1..N()`, `mw_assembly_view()` and the `Render_Plate`
+  dispatch), **not** at the bare geometry library. `mw_plate_*` is contagious via
+  `scad-compiler`'s include inlining, so it never belongs in a library other kits include
+- Multi-plate costs the MakerWorld listing its STL downloads — a per-model decision
+- The 36-plate cap is now V variants x P plates. See `docs/makerworld_publish_notes.md`
 
 ### Prebuilt models (non-SCAD)
 - A model whose `.3mf` already exists (CAD export, hand-assembled plate) declares a `prebuilt:`

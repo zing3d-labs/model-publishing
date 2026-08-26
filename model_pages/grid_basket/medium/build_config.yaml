@@ -10,8 +10,6 @@ variants:
       Basket_X_Units: 5
       Basket_Y_Units: 5
       Basket_Z_Units: 5
-      Orient_for_printing: true
-      Explosion_distance: 5
       # Pinned explicitly to the .scad file's own current defaults so a
       # future default change upstream can't silently alter what ships --
       # same reasoning as opengrid_beam's Corner_1/Corner_2 pinning. Only one
@@ -20,11 +18,17 @@ variants:
       Beam_Corners_X: "Extended"
       Beam_Corners_Y: "Flush"
       Beam_Corners_Z: "Flush"
+    # How this one variant is split for printing -- six plates, rendered by
+    # driving Render_Plate in mw_grid_basket.scad. Separate from variants:
+    # on purpose: a variant is a thing a user picks and carries copy into the
+    # description, a plate is only a print job. The deliverable is the packed
+    # multi-plate dist/grid_basket_medium/grid_basket_medium.3mf, so the STLs
+    # below are the intermediates it is packed from and no per-variant 3MF
+    # output is declared.
+    plates: [1, 2, 3, 4, 5, 6]
     outputs:
       - format: "stl"
         filename: "grid_basket_medium_5x5x5.stl"
-      - format: "3mf"
-        filename: "grid_basket_medium_5x5x5.3mf"
 
 project:
   # Live profile "5x5x5 Basket" on model 2505078.
@@ -38,8 +42,10 @@ images:
     colorscheme: "Nature"
 
   # Applied on top of variant parameters for all image renders
+  # mw_grid_basket.scad renders the assembly at Render_Plate 0 (its default,
+  # and what the plate renders above override per plate), so an image only has
+  # to ask for the basket un-exploded.
   parameter_overrides:
-    Orient_for_printing: false
     Explosion_distance: 0
 
   views:

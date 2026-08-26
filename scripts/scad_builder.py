@@ -20,6 +20,16 @@ import logging
 
 from model_config import is_prebuilt, load_merged_config, prebuilt_package_path, project_slug
 
+# The SCAD parameter an mw_ publishing entry point uses to pick which plate a
+# headless render emits: 0 for the assembly preview, 1..N for that plate alone
+# (see models/opengrid/kits/grid_basket/mw_grid_basket.scad). A variant's
+# `plates:` list is rendered by driving this one parameter, which is the same
+# decomposition MakerWorld's Parametric Model Maker reaches through mw_plate_N().
+# Both consumers therefore read the plates out of the .scad rather than each
+# carrying their own copy, which is the only way the 3MF users download from the
+# listing stays the same file we upload as the print profile.
+PLATE_PARAMETER = 'Render_Plate'
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -145,6 +155,59 @@ class SCADBuilder:
         variant_scad.write_text("".join(lines))
         return variant_scad
 
+    def _variant_plates(self, variant_name: str, variant_config: Dict[str, Any]) -> List[Any]:
+        """The plates one variant renders, as values to give PLATE_PARAMETER.
+
+        A variant with no `plates:` renders once and yields [None] -- the whole
+        model in a single pass, which is what a single-part model wants.
+        `plates: [1, 2, 3]` renders three times, once per plate.
+
+        variants and plates are deliberately separate axes rather than one
+        overloaded list. A variant is something a user chooses and it carries
+        user-facing copy into the description templates (see
+        generate_descriptions); a plate is only how one variant is split for
+        printing, and advertising plates as variants would put them in front of
+        readers as if they were choices.
+        """
+        plates = variant_config.get('plates')
+        if plates is None:
+            return [None]
+
+        where = f"{self.config_path}: variant '{variant_name}'"
+        if not isinstance(plates, list) or not plates:
+            raise ValueError(
+                f"{where} has an empty or non-list 'plates'. Drop the key entirely to "
+                "render the variant in a single pass."
+            )
+        for plate in plates:
+            if isinstance(plate, bool) or not isinstance(plate, int) or plate < 1:
+                raise ValueError(
+                    f"{where} lists plate {plate!r}; plates are whole numbers from 1 up, "
+                    f"matching the {PLATE_PARAMETER} values the SCAD source dispatches on."
+                )
+        if len(set(plates)) != len(plates):
+            raise ValueError(f"{where} lists a plate more than once: {plates}")
+        return plates
+
+    @staticmethod
+    def _plate_filename(filename: str, plate: Any) -> str:
+        """Per-plate output name: foo.stl -> foo_plate1.stl. Unplated names pass through."""
+        if plate is None:
+            return filename
+        path = Path(filename)
+        return f"{path.stem}_plate{plate}{path.suffix}"
+
+    @staticmethod
+    def _plate_label(variant_name: str, plate: Any) -> str:
+        """What this render is called as a build plate inside the packed 3MF."""
+        return variant_name if plate is None else f"{variant_name}_plate{plate}"
+
+    def _output_path(self, variant_name: str, output: Dict[str, Any], plate: Any) -> Path:
+        """Where one variant's one output for one plate lands. Both the render
+        loop and pack_3mf go through here so they cannot disagree about names."""
+        output_filename = output.get('filename', f"{variant_name}.{output['format']}")
+        return self.output_dir / 'variants' / self._plate_filename(output_filename, plate)
+
     def generate_variant_files(self, compiled_scad: Path):
         """Generate STL/3MF files for each variant"""
         logger.info("Generating variant files")
@@ -154,53 +217,65 @@ class SCADBuilder:
         additional_flags = self.config['build']['openscad'].get('additional_flags', [])
 
         for variant_name, variant_config in self.config['variants'].items():
-            logger.info(f"Processing variant: {variant_name}")
+            plates = self._variant_plates(variant_name, variant_config)
+            logger.info(
+                f"Processing variant: {variant_name}"
+                + (f" ({len(plates)} plates)" if plates != [None] else "")
+            )
 
-            variant_scad = self._variant_scad(compiled_scad, variant_config['parameters'])
-            try:
-                for output in variant_config['outputs']:
-                    output_format = output['format']
-                    output_filename = output.get('filename', f"{variant_name}.{output_format}")
-                    output_path = self.output_dir / 'variants' / output_filename
+            for plate in plates:
+                # Each plate is its own render, so it needs its own parameter
+                # set -- PLATE_PARAMETER is what the SCAD source dispatches on.
+                parameters = dict(variant_config['parameters'])
+                if plate is not None:
+                    parameters[PLATE_PARAMETER] = plate
+                    logger.info(f"Plate {plate} ({PLATE_PARAMETER}={plate})")
 
-                    format_flags = []
-                    if output_format == 'stl':
-                        stl_encoding = output.get('stl_encoding', 'binary')
-                        export_format = 'asciistl' if stl_encoding == 'ascii' else 'binstl'
-                        format_flags = ['--export-format', export_format]
+                variant_scad = self._variant_scad(compiled_scad, parameters)
+                try:
+                    for output in variant_config['outputs']:
+                        output_format = output['format']
+                        output_path = self._output_path(variant_name, output, plate)
+                        output_filename = output_path.name
 
-                    cmd = [
-                        openscad_exec,
-                        '-o', str(output_path),
-                        *additional_flags,
-                        *format_flags,
-                        str(variant_scad)
-                    ]
+                        format_flags = []
+                        if output_format == 'stl':
+                            stl_encoding = output.get('stl_encoding', 'binary')
+                            export_format = 'asciistl' if stl_encoding == 'ascii' else 'binstl'
+                            format_flags = ['--export-format', export_format]
 
-                    logger.info(f"Generating {output_format.upper()}: {output_filename}")
-                    logger.debug(f"Command: {' '.join(cmd)}")
+                        cmd = [
+                            openscad_exec,
+                            '-o', str(output_path),
+                            *additional_flags,
+                            *format_flags,
+                            str(variant_scad)
+                        ]
 
-                    file_start_time = time.time()
-                    try:
-                        result = subprocess.run(
-                            cmd,
-                            capture_output=True,
-                            text=True,
-                            timeout=timeout,
-                            env=self._openscad_env()
-                        )
+                        logger.info(f"Generating {output_format.upper()}: {output_filename}")
+                        logger.debug(f"Command: {' '.join(cmd)}")
 
-                        file_elapsed = time.time() - file_start_time
-                        if result.returncode != 0:
-                            logger.error(f"Failed to generate {output_filename}: {result.stderr} (took {file_elapsed:.2f}s)")
-                        else:
-                            logger.info(f"Successfully generated: {output_filename} (took {file_elapsed:.2f}s)")
+                        file_start_time = time.time()
+                        try:
+                            result = subprocess.run(
+                                cmd,
+                                capture_output=True,
+                                text=True,
+                                timeout=timeout,
+                                env=self._openscad_env()
+                            )
 
-                    except subprocess.TimeoutExpired:
-                        file_elapsed = time.time() - file_start_time
-                        logger.error(f"Timeout generating {output_filename} (took {file_elapsed:.2f}s)")
-            finally:
-                variant_scad.unlink(missing_ok=True)
+                            file_elapsed = time.time() - file_start_time
+                            if result.returncode != 0:
+                                logger.error(f"Failed to generate {output_filename}: {result.stderr} (took {file_elapsed:.2f}s)")
+                            else:
+                                logger.info(f"Successfully generated: {output_filename} (took {file_elapsed:.2f}s)")
+
+                        except subprocess.TimeoutExpired:
+                            file_elapsed = time.time() - file_start_time
+                            logger.error(f"Timeout generating {output_filename} (took {file_elapsed:.2f}s)")
+                finally:
+                    variant_scad.unlink(missing_ok=True)
 
     def generate_images(self, compiled_scad: Path):
         """Generate rendered images for variants"""
@@ -416,14 +491,19 @@ class SCADBuilder:
         stl_files = []
         plate_names = []
 
+        # One plate per STL, in config order: an unplated variant contributes a
+        # single plate, a plated one contributes its plates in the order the
+        # config lists them. stls_to_3mf.pack() already lays out one STL per
+        # plate, so all it needs is the longer list.
         for variant_name, variant_config in self.config['variants'].items():
-            for output in variant_config['outputs']:
-                if output['format'] == 'stl':
-                    output_filename = output.get('filename', f"{variant_name}.stl")
-                    stl_path = self.output_dir / 'variants' / output_filename
+            for plate in self._variant_plates(variant_name, variant_config):
+                for output in variant_config['outputs']:
+                    if output['format'] != 'stl':
+                        continue
+                    stl_path = self._output_path(variant_name, output, plate)
                     if stl_path.exists():
                         stl_files.append(str(stl_path))
-                        plate_names.append(variant_name)
+                        plate_names.append(self._plate_label(variant_name, plate))
                     else:
                         logger.warning(f"STL not found, skipping from 3MF: {stl_path.name}")
 
