@@ -79,7 +79,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_CHROME_USER_DATA_DIR = str(Path.home() / 'Library' / 'Application Support' / 'Google' / 'Chrome')
 DEFAULT_USERNAME = 'jonnydev13'
 VERIFY_POLL_INTERVAL_S = 10
-VERIFY_TIMEOUT_S = 300
+# MakerWorld's verification queue is theirs, not ours, and has no published SLA;
+# a first-time model publish routinely runs past five minutes (observed
+# 2026-09-07: openGrid Inbox still queued 15+ minutes after Confirm). The old
+# 300s budget expired mid-verification and surfaced as an error, which reads
+# like a failed publish and invites exactly the re-run that duplicates a listing.
+VERIFY_TIMEOUT_S = 900
 ENQUEUE_POLL_INTERVAL_S = 3
 # Generous on purpose. Measured enqueue lag on the 2026-08-14 facade republish was
 # ~65s against a then-60s cap, so the old value sat right on top of the real figure --
@@ -337,8 +342,14 @@ def check_not_challenged(page):
         )
 
 
-def poll_verification(page, username: str, model_name: str):
-    """Poll the Verifying/Failed queues until the model clears one way or the other."""
+def poll_verification(page, username: str, model_name: str) -> str:
+    """Poll the Verifying/Failed queues until the model clears one way or the other.
+
+    Returns 'passed' when verification cleared, or 'pending' when our patience ran
+    out while the item was still legitimately sitting in the queue. 'pending' is
+    NOT a failure: the publish already happened and MakerWorld finishes on its own.
+    Only a genuine rejection, or an unknown enqueue outcome, raises -- so a slow
+    queue can never be mistaken for a failed publish and retried."""
     verifying_url = f'https://makerworld.com/en/@{username}/verifying'
     failed_url = f'https://makerworld.com/en/@{username}/verify-failed'
 
@@ -392,10 +403,15 @@ def poll_verification(page, username: str, model_name: str):
         logger.info(f"Still verifying, checking again in {VERIFY_POLL_INTERVAL_S}s...")
         time.sleep(VERIFY_POLL_INTERVAL_S)
     else:
-        raise UpdateError(
-            f"Timed out after {VERIFY_TIMEOUT_S}s waiting for verification to clear. "
-            f"Check {verifying_url} manually."
+        logger.warning(
+            "Verification has not cleared after %ss, so this script stopped watching.\n"
+            "  The submit itself SUCCEEDED -- '%s' is queued at %s and MakerWorld will\n"
+            "  finish on its own. This is not a failure and there is nothing to retry.\n"
+            "  DO NOT re-run: a second run duplicates the listing (or the notification),\n"
+            "  and neither can be taken back.",
+            VERIFY_TIMEOUT_S, model_name, verifying_url,
         )
+        return "pending"
 
     page.goto(failed_url)
     page.wait_for_load_state('load')
@@ -406,6 +422,7 @@ def poll_verification(page, username: str, model_name: str):
         )
 
     logger.info(f"Verification passed for '{model_name}'")
+    return "passed"
 
 
 def update_print_profile(page, profile_id, mf3_path: Path, notify_message: str | None):
@@ -1113,6 +1130,77 @@ def run_new_profile(args, root_dir: Path):
     logger.info("Done.")
 
 
+def run_find_id(args, root_dir: Path):
+    """Look up an already-published model's makerworld ids.
+
+    The recovery path for a publish whose verification outran the script's
+    patience: `new-model` returns 'pending' without ids, and this picks them up
+    afterwards without touching the listing. Read-only -- it navigates and reads,
+    and changes nothing, so it is safe to run repeatedly until verification
+    clears."""
+    model_dir = root_dir / 'model_pages' / args.model
+    if not model_dir.exists():
+        print(f"No such model: {model_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    cfg = load_project_config(model_dir, root_dir, require_profile_id=False)
+    fields = load_publish_fields(cfg['config'], cfg['config_path'], root_dir)
+    name = fields['name']
+    logger.info("Looking up ids for %r", name)
+
+    p, page = connect_chrome(args.chrome_user_data_dir)
+    try:
+        model_id = find_new_model_id(page, args.username, name)
+        if not model_id:
+            # Not on the published list is three different situations with three
+            # different responses, so establish which one rather than guessing:
+            # queued (wait), rejected (read the reason and fix), or absent
+            # entirely (the publish never landed -- the only case worth acting on).
+            verifying_url = f'https://makerworld.com/en/@{args.username}/verifying'
+            failed_url = f'https://makerworld.com/en/@{args.username}/verify-failed'
+
+            page.goto(failed_url)
+            page.wait_for_load_state('load')
+            check_not_challenged(page)
+            if name in page.content():
+                raise UpdateError(
+                    f"Verification FAILED for {name!r}. The reason is stated at {failed_url}. "
+                    "Fix what it names, then re-publish -- do NOT re-run new-model blindly."
+                )
+
+            page.goto(verifying_url)
+            page.wait_for_load_state('load')
+            check_not_challenged(page)
+            if name in page.content():
+                logger.info(
+                    "%r is still in the verification queue at %s.\n"
+                    "  The publish succeeded; MakerWorld has not finished moderating it yet.\n"
+                    "  Nothing is wrong and nothing needs republishing -- re-run this command "
+                    "later.",
+                    name, verifying_url,
+                )
+                return
+
+            logger.warning(
+                "%r is in NO queue: not published, not verifying, not failed.\n"
+                "  That means the publish did not land, or the listing carries a different "
+                "name than the config's %r.\n"
+                "  Check https://makerworld.com/en/@%s/upload by hand before republishing.",
+                name, name, args.username,
+            )
+            return
+        profile_id = find_new_profile_id(page, args.username, model_id)
+        logger.info(
+            "Found. Add to model_pages/%s/build_config.yaml (project:):\n"
+            '  makerworld_url: "https://makerworld.com/en/models/%s"\n'
+            "  makerworld_profile_id: %s",
+            args.model, model_id, profile_id or "<look it up: the #profileId- fragment>",
+        )
+    finally:
+        page.close()
+        p.stop()
+
+
 def run_new_model(args, root_dir: Path):
     model_dir = root_dir / 'model_pages' / args.model
     if not model_dir.exists():
@@ -1193,7 +1281,14 @@ def run_new_model(args, root_dir: Path):
                 )
                 return
 
-            poll_verification(page, args.username, fields['name'])
+            if poll_verification(page, args.username, fields['name']) == "pending":
+                logger.info(
+                    "Published; ids not captured because verification is still running. "
+                    "Once it clears, capture them with:\n"
+                    "    python scripts/makerworld_update.py find-id %s",
+                    args.model,
+                )
+                return
 
             model_id = find_new_model_id(page, args.username, fields['name'])
             if not model_id:
@@ -1258,6 +1353,15 @@ def main():
     new_profile_parser.add_argument('--description', metavar='TEXT', help="Print Profile Description")
     new_profile_parser.add_argument('--private', action='store_true', help="Publish as Private (default: Public)")
 
+    find_id_parser = subparsers.add_parser(
+        'find-id',
+        help="Look up an already-published model's ids (read-only; the recovery path "
+             "when verification outran new-model)",
+    )
+    find_id_parser.add_argument(
+        'model', help="Model/profile directory under model_pages/ (e.g. opengrid_facade)"
+    )
+
     new_model_parser = subparsers.add_parser(
         'new-model', help="First-time publish of a whole new model (creates the listing itself)"
     )
@@ -1303,6 +1407,8 @@ def main():
             run_new_profile(args, root_dir)
         elif args.command == 'new-model':
             run_new_model(args, root_dir)
+        elif args.command == 'find-id':
+            run_find_id(args, root_dir)
     except UpdateError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

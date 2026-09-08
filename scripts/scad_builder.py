@@ -409,7 +409,7 @@ class SCADBuilder:
             canonical_sections = {
                 'makerworld': [
                     'model_description', 'intro', 'variants', 'print_settings', 'downloads',
-                    'assembly', 'collection', 'support_project', 'related_models',
+                    'assembly', 'attribution', 'collection', 'support_project', 'related_models',
                     'changelog',
                 ],
                 'printables': [

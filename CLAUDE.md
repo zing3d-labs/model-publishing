@@ -31,10 +31,18 @@ OpenSCAD source files live in the `models/` submodule ([zing3d-labs/openscad-mod
   - `copy_description.py` - macOS clipboard helper for MakerWorld
   - `makerworld_update.py` - Create/publish/update MakerWorld listings (Playwright):
     `new-model` (create the listing itself), `new-profile` (add a print profile to an
-    existing model), `update` (replace an existing profile's file)
+    existing model), `update` (replace an existing profile's file), `find-id` (read-only:
+    recover a published model's `makerworld_url`/`makerworld_profile_id` for the config,
+    and say whether it is published, rejected, still queued, or absent)
   - `description_fields.py` - Parses the built `=== FIELD ===` descriptions, shared by
     `copy_description.py` and `makerworld_update.py new-model`
   - `makerworld_comments.py` - Read and reply to MakerWorld comments (Playwright)
+  - `preview_listing.py` - Render the built description + photos into a standalone HTML
+    preview of the listing, for review before any browser opens. Takes the same
+    `--cover`/`--photo` flags as `makerworld_update.py new-model`, in the same order, and
+    converts the copy with the same `description_fields.markdown_to_html()` the publisher
+    pastes into CKEditor — so markdown that won't survive the publish doesn't survive the
+    preview either
 - `templates/` - Jinja2 templates for description generation
 - `dist/` - Build outputs (gitignored)
 
@@ -119,8 +127,11 @@ python scripts/copy_description.py model_pages/<model>/build_config.yaml makerwo
 - Collection templates live in `templates/sections/collections/{collection}/`
 - All openGrid models must have `collection: "opengrid"` in their build config `project:` block
 - **Never add a `related_models` section to any model unless the user explicitly specifies which models to link**
-- Canonical sections (makerworld): model_description, intro, print_settings, downloads, assembly, collection, support_project, related_models
-- Canonical sections (printables): model_description, intro, print_settings, downloads, assembly, attribution, collection, support_project, related_models
+- Canonical sections (makerworld): model_description, intro, variants, print_settings, downloads, assembly, attribution, collection, support_project, related_models, changelog
+- Canonical sections (printables): model_description, intro, variants, print_settings, downloads, assembly, attribution, collection, support_project, related_models, changelog
+- `attribution` has no shared or site-level default, so it renders only for a model that writes
+  its own `sections/attribution.md` — that's where a licence *condition* (crediting a remixed
+  source whose licence requires it) goes, rather than buried in `intro`
 
 ## Code Conventions
 

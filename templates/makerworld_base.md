@@ -41,6 +41,10 @@
 {{sections.assembly}}
 
 {% endif %}
+{% if sections.attribution is defined and sections.attribution %}
+{{sections.attribution}}
+
+{% endif %}
 {% if sections.print_profile is defined and sections.print_profile %}
 {{sections.print_profile}}
 
