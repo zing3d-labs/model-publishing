@@ -27,6 +27,9 @@ project:
   version: "1.0.0"
   author: "Jonathan Huizingh"
   license: "CC BY-NC-SA 4.0"
+  # Published 2026-09-07; cleared MakerWorld verification 2026-09-08.
+  makerworld_url: "https://makerworld.com/en/models/3277198-opengrid-inbox"
+  makerworld_profile_id: 3716701
 
 source:
   input_file: "../../models/opengrid/parts/opengrid_inbox.scad"

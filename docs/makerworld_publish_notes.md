@@ -466,7 +466,9 @@ State this plainly rather than letting the next person discover it mid-publish:
 - **It sets one print profile** — the one in the uploaded `.3mf`. A multi-profile model's other
   profiles are still added afterwards with `new-profile`.
 - **It doesn't write the ids back into the config.** It prints `makerworld_url` and
-  `makerworld_profile_id` for you to paste in, the same as `new-profile` does.
+  `makerworld_profile_id` for you to paste in, the same as `new-profile` does. If verification
+  outlives the poll, it prints nothing to paste — recover the pair later with
+  `makerworld_update.py find-id <model>` (below).
 - **It won't touch an already-published model.** A config with `project.makerworld_url` is
   refused unless `--force`, because a second run would create a duplicate listing rather than
   update the existing one.
@@ -1117,6 +1119,60 @@ The error text now points at the same three checks written up below, and the
 debug screenshot saved on failure is the `/verifying` page as it looked at
 the deadline — on the facade run that screenshot already showed the item
 queued, so read it first.
+
+**The clear-timeout used to make the same mistake, and no longer does.**
+`VERIFY_TIMEOUT_S` was 300s, which is nowhere near the real spread: the
+openGrid Inbox publish (2026-09-07) was still queued 15 minutes after
+Confirm and only cleared overnight — call it ~23 hours end to end. That
+budget expired mid-queue and surfaced as an `UpdateError`, which reads like
+a failed publish and invites exactly the re-run that duplicates a listing.
+Two changes:
+
+- `VERIFY_TIMEOUT_S` is now **900s**.
+- **`poll_verification()` returns a status instead of raising on timeout.**
+  It returns `'passed'` when verification cleared and `'pending'` when our
+  patience ran out with the item still legitimately in the queue. `'pending'`
+  is *not* a failure — the publish already happened and MakerWorld finishes
+  on its own. Only a genuine rejection, or an unknown enqueue outcome, still
+  raises. A slow queue can no longer be mistaken for a failed publish.
+
+`new-model` reacts to `'pending'` by skipping the id lookup (the model isn't
+on the published list yet, so it would only return `None`) and telling you
+which command to run once it clears.
+
+### `find-id`: recovering the ids after the fact
+
+```bash
+python scripts/makerworld_update.py find-id <model>
+```
+
+Looks the model up by `project.name` on `/en/@{username}/upload` and prints
+the `makerworld_url` / `makerworld_profile_id` pair for the config. It is
+read-only — it navigates and reads, and changes nothing.
+
+The point of the subcommand is that **"not on the published list" is three
+different situations wanting three different responses**, and guessing
+between them is how a good publish gets re-run. So it establishes which one:
+
+| State | What it does |
+|---|---|
+| On the published list | Prints the two config lines. Done. |
+| In `/verify-failed` | **Raises**, naming the page that states the reason. Fix what it names; do *not* re-run `new-model` blindly. |
+| In `/verifying` | Informational, exit 0. The publish succeeded and moderation hasn't finished. Nothing needs republishing — re-run later. |
+| In no queue at all | Warns. This is the only case where the publish genuinely never landed. |
+
+Worked example — openGrid Inbox, published 2026-09-07:
+
+```
+$ python scripts/makerworld_update.py find-id opengrid_inbox
+INFO - Found. Add to model_pages/opengrid_inbox/build_config.yaml (project:):
+  makerworld_url: "https://makerworld.com/en/models/3277198"
+  makerworld_profile_id: 3716701
+```
+
+Note it prints the bare-id URL. That resolves fine, but the canonical form
+carries the slug (`3277198-opengrid-inbox`), which is what the live page
+redirects to and what the other configs use — worth pasting in that form.
 
 ### Establishing what actually happened after an ambiguous update
 
