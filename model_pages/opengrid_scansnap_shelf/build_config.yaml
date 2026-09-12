@@ -1,0 +1,82 @@
+# openGrid ScanSnap Sturdy Scanner Shelf Build Configuration
+#
+# A REMIX, and a PREBUILT model -- there is no SCAD source for this one and
+# none is coming. The package is one specific configuration of mitufy's
+# openConnect Sturdy Shelf generator, produced through the MakerWorld
+# customizer and laid out by hand in Bambu Studio. Nothing in this repo
+# compiles it, so package/opengrid_scansnap_shelf.3mf IS the source of truth
+# -- see prebuilt_package_path() in scripts/model_config.py.
+#
+# LICENSE, and do not "fix" it to match the other models: mitufy's shelf
+# generator is CC BY-SA 4.0 (stated in openconnect_sturdy_shelf.scad's own
+# header, and in the opengrid-projects README's holder/drawer/shelf/hook/
+# label/gadget group -- that repo has no LICENSE file, so those are the
+# terms). ShareAlike is inherited by a derivative work, so this listing must
+# be CC BY-SA 4.0. It is the only model in this repo that is not CC BY-NC-SA,
+# and the remix credit alone would NOT satisfy ShareAlike -- both are needed.
+#
+# Three plates:
+#   1. "Left"  -- one shelf half, 140 wide x 280 deep x 56 tall
+#   2. "Right" -- the other half, same size
+#   3. "Snaps" -- 8 openConnect snaps + 8 screws (mitufy, CC BY 4.0)
+# Both halves sit DIAGONALLY on the plate: at 280mm the depth does not fit a
+# 256mm P1S bed square-on. And the split exists because the halves print on
+# their side, so an unsplit 280mm-wide shelf would need 280mm of Z.
+#
+# The plate names and the object names inside them are swapped relative to
+# each other (plate "Left" holds ..._right.stl). Harmless, but do not write
+# copy that depends on a plate label meaning a side.
+#
+# The two halves are separate generator outputs rather than one mirrored
+# part: mitufy's openConnect head is chiral, so a mirrored slot presents its
+# locking nub to the wrong detent. Their triangle counts differ slightly
+# (223,366 vs 223,392) for that reason -- they are not meant to match.
+
+project:
+  name: "openGrid ScanSnap sturdy scanner shelf"
+  collection: "opengrid"
+  description: "A wide, wall-mounted openGrid shelf sized to carry a desktop document scanner. 280 x 280mm of deck across two printed halves, hung on openConnect snaps, with a trussed underside that takes the weight of a Fujitsu ScanSnap iX1600 or anything of similar size."
+  version: "1.0.0"
+  author: "Jonathan Huizingh"
+  license: "CC BY-SA 4.0"
+
+# Declared INSTEAD OF `source:` -- the two are mutually exclusive. Path is
+# relative to this config's directory and must sit in a subdirectory of it.
+prebuilt:
+  package: "package/opengrid_scansnap_shelf.3mf"
+
+# Modular template system
+templates:
+  base_template: "base_template.md"
+  template_root: "../../templates"
+
+  sites:
+    makerworld:
+      base_template: "makerworld_base.md"
+      output_file: "descriptions/makerworld_description.txt"
+      model_type: "remix"
+      category: "Organizers"
+      tags: "opengrid, openconnect, shelf, scanner, scansnap, wall mount, remix, organizer, office, desk"
+      # Model Origin on the listing. mitufy's shelf generator is the work this
+      # is a configuration of and is the one that carries the CC BY-SA
+      # obligation; the other two are the systems it plugs into.
+      source_urls:
+        - "https://makerworld.com/en/models/2257523-openconnect-sturdy-shelf-generator"
+        - "https://makerworld.com/en/models/2257440-openconnect-opengrid-s-own-connector-system"
+        - "https://makerworld.com/en/models/1179191-opengrid-wall-desk-mounting-framework-ecosystem"
+      print_profile:
+        name: "0.2mm layer, 2 walls, 15% infill"
+        settings:
+          - "0.2mm layer height"
+          - "2 walls"
+          - "15% infill"
+          - "No supports required"
+          - "Print each half on its side, as the plates are laid out"
+        notes: "These are the settings saved in the project file, for a P1S in Bambu PLA Basic. Printing on the side is the whole point of the design rather than a packing trick -- it puts the layer lines across the load instead of along it, so the deck is not relying on layer adhesion to hold anything up. Do not re-orient the plates flat to save time."
+
+# Build pipeline settings. A prebuilt model generates descriptions only --
+# there is nothing to compile, no variants to export and no renders to make
+# (the listing uses real photos).
+build:
+  output_directory: "dist/"
+  clean_before_build: true

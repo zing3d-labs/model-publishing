@@ -20,6 +20,7 @@ Build configurations for each publishable model. Each subdirectory contains a `b
 - `opengrid_beam/` - Parametric beam in Full/Lite thickness, 2-12 units
 - `dual_sided_snap/` - All 8 combinations of Lite/Standard/Directional
 - `grid_basket/` - Multiple basket sizes (2x2x1 through 4x4x3)
+- `opengrid_scansnap_shelf/` - Prebuilt remix of mitufy's sturdy shelf generator, 280mm square, CC BY-SA 4.0
 
 ## Prebuilt models
 
