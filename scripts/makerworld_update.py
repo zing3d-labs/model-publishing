@@ -342,6 +342,40 @@ def check_not_challenged(page):
         )
 
 
+def pass_account_interstitial(page, expected_url_prefix: str):
+    """Click through Bambu's 'continue as <user>' account page if a navigation
+    landed there instead of on the MakerWorld page we asked for.
+
+    First hit 2026-09-14 on the first real `new-model` publish: goto() on
+    /en/my/models/publish came back as a Bambu Lab account page showing the
+    avatar, the username, a single green 'Continue' button and a 'Log Out'
+    link -- a session re-confirmation, not a login (no credentials are asked
+    for). The script assumed it was on the wizard, looked for step 1's radio
+    and timed out after 30s with nothing to say about why. Continue is the one
+    thing a human would click here, and it only confirms the account the
+    browser is already signed into, so the script clicks it -- and then
+    checks the URL actually came back to where it was going, rather than
+    trusting the click."""
+    if page.url.startswith(expected_url_prefix):
+        return
+    cont = page.get_by_role('button', name='Continue', exact=True)
+    logout = page.get_by_text('Log Out', exact=True)
+    if cont.count() == 0 or logout.count() == 0:
+        return  # not the interstitial; let the caller's own checks speak
+    logger.info(f"Account re-confirmation page at {page.url} -- clicking Continue")
+    cont.click()
+    try:
+        page.wait_for_url(f'{expected_url_prefix}**', timeout=30000)
+    except Exception:
+        raise UpdateError(
+            f"Clicked Continue on the account page but ended up at {page.url}, "
+            f"not back under {expected_url_prefix}. Finish signing in by hand in "
+            "the browser window, then re-run."
+        )
+    page.wait_for_load_state('load')
+    check_not_challenged(page)
+
+
 def poll_verification(page, username: str, model_name: str) -> str:
     """Poll the Verifying/Failed queues until the model clears one way or the other.
 
@@ -841,12 +875,24 @@ def create_model(
     Upload -> Model Information -> Print Profile Information."""
     model_type = fields['model_type']
     logger.info(f"Creating a new {model_type} model: {fields['name']}")
-    page.goto(f'https://makerworld.com/en/my/models/publish?type={model_type}')
+    publish_url = f'https://makerworld.com/en/my/models/publish?type={model_type}'
+    page.goto(publish_url)
     page.wait_for_load_state('load')
     check_not_challenged(page)
+    pass_account_interstitial(page, 'https://makerworld.com/en/my/models/publish')
 
     # --- step 1: upload ---
-    page.get_by_role('radio', name='Yes (earn extra points reward)').check()
+    points_radio = page.get_by_role('radio', name='Yes (earn extra points reward)')
+    try:
+        points_radio.wait_for(state='visible', timeout=30000)
+    except Exception:
+        raise UpdateError(
+            f"Expected the publish wizard's step 1 but the page at {page.url} "
+            f"(title {page.title()!r}) has no 'Yes (earn extra points reward)' radio. "
+            "MakerWorld may have changed the wizard, or redirected somewhere this "
+            "script doesn't recognise -- see the debug screenshot."
+        )
+    points_radio.check()
     page.locator('input[type="file"][accept=".3mf"]').set_input_files(str(mf3_path))
     wait_for_upload(page, mf3_path.name)
     if scad_path:
