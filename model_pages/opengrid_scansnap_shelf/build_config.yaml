@@ -39,6 +39,9 @@ project:
   version: "1.0.0"
   author: "Jonathan Huizingh"
   license: "CC BY-SA 4.0"
+  # Published 2026-09-14 via new-model; cleared MakerWorld verification 2026-09-15.
+  makerworld_url: "https://makerworld.com/en/models/3308659-opengrid-scansnap-sturdy-scanner-shelf"
+  makerworld_profile_id: 3755903
 
 # Declared INSTEAD OF `source:` -- the two are mutually exclusive. Path is
 # relative to this config's directory and must sit in a subdirectory of it.

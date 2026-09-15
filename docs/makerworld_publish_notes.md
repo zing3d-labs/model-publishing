@@ -634,6 +634,12 @@ the 900s cap** and the script handed off at 10:21:42 with the model still queued
 shape as the Inbox on 2026-09-07. This is the designed outcome, not an error: ids are captured
 afterwards with `find-id opengrid_scansnap_shelf`.
 
+**Cleared 2026-09-15** — roughly a day in the queue, like the Inbox. `find-id` returned model
+`3308659`, profile `3755903`; the live page redirects to
+`/en/models/3308659-opengrid-scansnap-sturdy-scanner-shelf`. Verified on the served page, not the
+edit page: licence renders as "Share Alike", all three Model Origins are listed, and the
+description's "Credits and License" section survived the CKEditor paste.
+
 **Still unexercised on `new-model`:** the `--scad` raw-file upload (`wait_for_raw_file_upload()`)
 — every real `new-model` run so far has been a prebuilt model with no source to upload.
 
