@@ -107,11 +107,11 @@ the real openGrid Beam geometry change live.
   text — see "MakerWorld comment automation" section below for details.
 
 **Loose ends / next steps, in order:**
-0. (added 2026-08-12) `new-model` exists and works — see "Update 2026-08-12". Rehearsed by the
-   script itself, end to end, but only ever as far as **`--draft`**: nothing has been published
-   through it, so read that update's "what is still unexercised" list (the Publish path, `--scad`,
-   the remix Model Origin path) before the first real use. Three throwaway drafts were left
-   behind on purpose (`9196491`, `9196793`, `9196815`), same as the other rehearsal junk below.
+0. (added 2026-08-12) `new-model` exists and works — see "Update 2026-08-12". **Used for a real
+   Public publish on 2026-09-14** (the ScanSnap shelf — see "Update 2026-09-14"), which exercised
+   the Publish path and the remix Model Origin path for the first time; only `new-model`'s
+   `--scad` raw-file upload is still unexercised. Three throwaway drafts were left behind on
+   purpose (`9196491`, `9196793`, `9196815`), same as the other rehearsal junk below.
 1. Test fixture has accumulated throwaway junk from rehearsals (3 print
    profiles, 4 comments/replies) — deliberately left alone, Private and
    disposable, not worth the cleanup trip. Ignore.
@@ -258,9 +258,9 @@ loose beside the config, package escaping the config dir, package missing, packa
 empty `prebuilt` block, both `source` and `prebuilt`, neither. All 7 pre-existing configs still
 build descriptions unchanged.
 
-**Not done:** no prebuilt model has been published to MakerWorld yet — the first real one is the
-ScanSnap openGrid shelf. The upload path itself is shared with normal models from
-`resolve_upload_files()` onward, so only the file-resolution half is new and unexercised live.
+**Done 2026-09-14:** the first prebuilt model, `opengrid_scansnap_shelf`, was published through
+`new-model` from its committed `.3mf` — see "Update 2026-09-14". The prebuilt upload path is now
+proven live, not just against the fixture.
 
 ### Update 2026-08-09 — `--scad` live test staged (loose end #2)
 
@@ -598,6 +598,50 @@ Neither `designId` nor the model id changed (`designId=3055595` in the customize
 genuinely untested is the thing the fixture cannot answer: what happens to the **241 existing
 Customize uses** on beam when its raw `.scad` is replaced. The fixture has no meaningful
 customization history, so that risk is unchanged by this test.
+
+### Update 2026-09-14 — first real `new-model` publish (ScanSnap shelf, prebuilt, remix, CC BY-SA)
+
+`python3 scripts/makerworld_update.py new-model opengrid_scansnap_shelf --cover … --cover … --photo ×3`
+— Public, no `--draft`. This was the first time three things ran for real at once: the
+**Publish path** past "Save to draft", the **remix Model Origin path** (`add_model_origins()`),
+and the **prebuilt upload** from a committed `model_pages/…/package/*.3mf`. All three worked.
+It was also the first **CC BY-SA** listing on the account; `set_license()` read back
+"Creative Commons Attribution-Share Alike" from MakerWorld's own summary, so the BY-SA row of the
+licence table is now confirmed on a real publish, not only on the form.
+
+**One new failure mode, found on the first attempt and fixed before the second:** `goto()` on
+`/en/my/models/publish?type=remix` did not land on the wizard. It landed on
+`https://bambulab.com/en-us/sign-in?ticket=1&to=https%3A%2F%2Fmakerworld.com%2Fapi%2Fsign-in%2Fticket%3Fto%3D…`
+— Bambu's SSO ticket hand-off, rendered as an account page (avatar, username, one green
+**Continue** button, a "Log Out" link; no credentials asked for). The script assumed it was on
+step 1, waited 30s for the points radio and died with a bare `TimeoutError`; the debug screenshot
+was what explained it. That attempt died *before* "Next Step", so it created no draft and the
+re-run was safe. `pass_account_interstitial()` now recognises the page (Continue + Log Out
+present, URL not under the target), clicks Continue, and then **checks the URL actually returned
+under `/en/my/models/publish`** rather than trusting the click — anything else raises with the
+URL it ended up at. Step 1's radio lookup also now names the page and title it found instead of
+timing out silently. Only `create_model()` calls the helper so far; `update` and `new-profile`
+navigate to different pages and have not hit this, but the same hand-off could plausibly appear
+there.
+
+**Timeline of the successful run** (attempt 2): connect 10:05:20 → Continue clicked 10:05:32 →
+`.3mf` uploaded 10:05:39 → draft `9624216` created 10:05:47 → three origins resolved by 10:05:52
+("openConnect - Sturdy Shelf Generator", "openConnect - openGrid's own connector system",
+"openGrid - Wall/Desk mounting framework/ecosystem") → licence 10:06:06 → Model Pictures 0→3 →
+Print Profile Pictures 1→4 → Publish clicked, in the Verifying queue at 10:06:38 (~6s enqueue
+lag this time — much shorter than the ~65s measured on the facade). Then **verification ran past
+the 900s cap** and the script handed off at 10:21:42 with the model still queued — the same
+shape as the Inbox on 2026-09-07. This is the designed outcome, not an error: ids are captured
+afterwards with `find-id opengrid_scansnap_shelf`.
+
+**Cleared 2026-09-15** — roughly a day in the queue, like the Inbox. `find-id` returned model
+`3308659`, profile `3755903`; the live page redirects to
+`/en/models/3308659-opengrid-scansnap-sturdy-scanner-shelf`. Verified on the served page, not the
+edit page: licence renders as "Share Alike", all three Model Origins are listed, and the
+description's "Credits and License" section survived the CKEditor paste.
+
+**Still unexercised on `new-model`:** the `--scad` raw-file upload (`wait_for_raw_file_upload()`)
+— every real `new-model` run so far has been a prebuilt model with no source to upload.
 
 ## openGrid Beam: Full/Lite split into two print profiles
 
