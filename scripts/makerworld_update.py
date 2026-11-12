@@ -5,8 +5,10 @@ MakerWorld update automation.
 Three subcommands, all documented in docs/makerworld_publish_notes.md:
 
   update       Replace the .3mf on an EXISTING print profile ("Replace
-               File"), optionally also delete+reupload the raw .scad
-               customizer source (--scad). Requires
+               File"), optionally also replace the raw .scad customizer
+               source in place through MakerWorld's code editor (--scad,
+               plus --real-photo x3 the first time a listing is edited, for
+               its "Real life photos" section). Requires
                project.makerworld_profile_id in the build config.
 
   new-profile  First-time publish of a NEW print profile onto an EXISTING
@@ -54,6 +56,10 @@ Usage:
     python3 scripts/makerworld_update.py update opengrid_beam/full --notify-message "..."
     python3 scripts/makerworld_update.py update opengrid_beam/full --no-notify
     python3 scripts/makerworld_update.py update opengrid_beam/full --no-notify --scad
+    python3 scripts/makerworld_update.py update opengrid_inbox --no-notify --scad \\
+        --real-photo model_pages/opengrid_inbox/images/opengrid_inbox_letter_mounted_front.jpg \\
+        --real-photo model_pages/opengrid_inbox/images/opengrid_inbox_letter_mounted_profile.jpg \\
+        --real-photo model_pages/opengrid_inbox/images/opengrid_inbox_letter_grid_back.jpg
     python3 scripts/makerworld_update.py new-profile opengrid_beam/lite \\
         --photo model_pages/opengrid_beam/images/opengrid_beam_wide_view.jpg \\
         --name "Lite Print Settings" --description "..."
@@ -868,6 +874,7 @@ def wait_for_raw_file_upload(page, path: Path):
 def create_model(
     page, fields: dict, mf3_path: Path, scad_path: Path | None,
     covers: list[Path], photos: list[Path], private: bool, draft: bool = False,
+    real_photos: list[Path] | None = None,
 ) -> str | None:
     """First-time publish of a whole NEW model -- the flow that creates the
     listing itself, as opposed to `update` (replace an existing profile's file)
@@ -929,6 +936,13 @@ def create_model(
         submit_crop_dialog(page)
     if photos:
         upload_photos(page, '.js-scroll-designPictures', photos, 'Model Pictures')
+    # The Real life photos section (>=3 required, see check_real_life_photos)
+    # appeared on the model edit page in 2026-11. Not yet seen in this wizard,
+    # which was last run before then -- filled here if it turns up.
+    # With no photos to give (a --draft run without --photo), leave the section
+    # for MakerWorld's own form check to report rather than failing here.
+    if real_photos and check_real_life_photos(page, real_photos):
+        upload_real_life_photos(page, real_photos)
 
     # Model Name goes LAST, for the same reason the print profile's does:
     # MakerWorld autofills it from the uploaded file asynchronously and will
@@ -992,40 +1006,161 @@ def find_new_model_id(page, username: str, model_name: str) -> str | None:
     return model_id_from_url(href) if href else None
 
 
-def update_raw_model_file(page, model_id, scad_path: Path, notify_message: str | None):
+REAL_PHOTOS_SELECTOR = '[data-testid="publish-real-pictures"]'
+# The pencil overlay on a raw file's thumbnail, which opens the code editor.
+# Its only classes are generated (mw-css-*), so it is found by shape: the
+# icon-bearing layer stacked beside the thumbnail <img>.
+SCAD_EDIT_OVERLAY = 'div:has(> img) > div:has(svg)'
+# What the section's own hint asks for: "Upload >=3 photos of the printed model,
+# covering 3 views". Publish is refused below this.
+MIN_REAL_PHOTOS = 3
+
+
+def check_real_life_photos(page, photos: list[Path]) -> bool:
+    """Fail before anything on the page changes if Publish would be refused for
+    want of real life photos. Returns whether photos need uploading."""
+    if page.locator(REAL_PHOTOS_SELECTOR).count() == 0:
+        logger.info("No 'Real life photos' section on this page -- nothing to fill")
+        return False
+    have = read_photo_count(page, REAL_PHOTOS_SELECTOR)
+    if have >= MIN_REAL_PHOTOS:
+        logger.info(f"Real life photos: already {have}, leaving them alone")
+        return False
+    if have + len(photos) < MIN_REAL_PHOTOS:
+        raise UpdateError(
+            f"MakerWorld needs at least {MIN_REAL_PHOTOS} real life photos of the printed "
+            f"model (3 views) before this edit can be published; the listing has {have} "
+            f"and {len(photos)} were given. Pass --real-photo PATH for each (real print "
+            "photos, not renders -- e.g. front, side and back). Nothing was changed."
+        )
+    return True
+
+
+def upload_real_life_photos(page, photos: list[Path]):
+    """Fill the model edit page's "Real life photos" section if it is short.
+
+    MakerWorld added this section to the model edit page in late 2026, and a
+    model edit can't be published without it: the first raw-file update after
+    it appeared (openGrid Inbox, 2026-11-11) was refused at Publish until three
+    photos were added. Models published before then start at 0 / 16, so the
+    first edit of each one needs photos; after that the section keeps them and
+    this is a no-op (see check_real_life_photos)."""
+    section = page.locator(REAL_PHOTOS_SELECTOR)
+    section.scroll_into_view_if_needed()
+    upload_photos(page, REAL_PHOTOS_SELECTOR, photos, 'Real life photos')
+    # The count rises as soon as each file is accepted; the thumbnails then show
+    # an upload percentage until the photo is actually stored. Publishing while
+    # any is still at a percentage risks sending the form without it.
+    try:
+        page.wait_for_function(
+            "sel => !/\\d+%/.test(document.querySelector(sel).innerText)",
+            arg=REAL_PHOTOS_SELECTOR, timeout=UPLOAD_TIMEOUT_MS,
+        )
+    except Exception:
+        raise UpdateError("Real life photos never finished uploading -- check the browser window.")
+
+
+def raw_file_row(page, stem: str):
+    """The Raw Model Files row holding our .scad. Each row is classed
+    js-scroll-modelFiles-<unikey>, and its renamable name input holds the stem
+    (React-set, so matched by .value, not by a [value=] selector)."""
+    rows = page.locator('[class*="js-scroll-modelFiles-"]')
+    rows.first.wait_for(state='visible', timeout=30000)
+    for i in range(rows.count()):
+        row = rows.nth(i)
+        values = row.locator('input').evaluate_all('els => els.map(e => e.value)')
+        if stem in values:
+            return row
+    raise UpdateError(
+        f"No Raw Model Files row named '{stem}' on the edit page. The in-place edit "
+        "only replaces an existing raw file; the first upload of one goes through new-model."
+    )
+
+
+def update_raw_model_file(
+    page, model_id, scad_path: Path, notify_message: str | None, real_photos: list[Path],
+):
+    """Replace the raw .scad in place, through MakerWorld's own code editor.
+
+    The old route -- delete the raw file, re-upload through Browse, Publish --
+    stopped working in 2026-11: the submit never reached the verification queue
+    (two runs on openGrid Inbox, both "UNKNOWN OUTCOME", the old file still
+    served). What works is the editor MakerWorld opens from the raw file's
+    thumbnail: a Parametric Model Maker tab with the source in a Monaco editor
+    and an Upload button that overwrites the stored file. Publish on the edit
+    page then also requires the Real life photos section to be filled."""
     logger.info(f"Updating raw model file for model {model_id} with {scad_path.name}")
+    source = scad_path.read_text()
     page.goto(f'https://makerworld.com/en/my/models/{model_id}/edit')
     page.wait_for_load_state('load')
     check_not_challenged(page)
 
-    delete_btn = page.locator('button:has(svg[data-testid="DeleteOutlinedIcon"])').first
-    if delete_btn.count() > 0 and delete_btn.is_visible():
-        delete_btn.click()
-        confirm_dialog = page.get_by_role('dialog', name='Delete Raw model file')
-        confirm_dialog.wait_for(state='visible')
-        confirm_dialog.get_by_role('button', name='Delete', exact=True).click()
-        page.wait_for_timeout(1000)
-    else:
-        logger.info("No existing raw model file found to delete -- this is a first-time upload")
+    row = raw_file_row(page, scad_path.stem)
+    need_photos = check_real_life_photos(page, real_photos)
+    row.scroll_into_view_if_needed()
+    # The thumbnail's edit overlay swallows pointer events, so it is the overlay
+    # itself that is clicked (a hover on the image underneath never lands). It
+    # opens the editor in a NEW TAB.
+    with page.context.expect_page(timeout=30000) as editor_info:
+        row.locator(SCAD_EDIT_OVERLAY).first.click()
+    editor = editor_info.value
+    try:
+        editor.wait_for_load_state('load')
+        if 'parametricModelMaker' not in editor.url:
+            raise UpdateError(f"Expected the Parametric Model Maker editor, got {editor.url}")
+        editor.wait_for_function(
+            "() => window.monaco && window.monaco.editor.getModels().length > 0",
+            timeout=60000,
+        )
+        # Set through Monaco's model API rather than typed: typing 80 KB of source
+        # is slow and the editor's auto-indent and bracket-closing rewrite it.
+        editor.evaluate("src => window.monaco.editor.getModels()[0].setValue(src)", source)
+        if editor.evaluate("() => window.monaco.editor.getModels()[0].getValue()") != source:
+            raise UpdateError("The code editor did not take the new source verbatim -- nothing uploaded.")
+        logger.info(f"Loaded {len(source)} chars into the code editor")
 
-    # Two elements answer to the accessible name "Browse": the surrounding
-    # dropzone (a <div role="button"> covering the whole "Drag your files here"
-    # area) and the real <button> inside it, so get_by_role(name='Browse') dies
-    # on strict mode. Scoping by tag is what disambiguates -- note that
-    # 'button:text-is("Browse")' does NOT work, because :text-is matches the
-    # smallest element holding the text and MakerWorld nests the label in a
-    # couple of divs under the button.
-    browse_btn = page.locator('button').filter(has_text='Browse')
-    with page.expect_file_chooser() as fc_info:
-        browse_btn.click()
-    fc_info.value.set_files(str(scad_path))
+        # get_by_role(name='Upload') finds nothing here; the button's label sits
+        # in nested divs, so it is matched by tag plus text.
+        editor.locator('button').filter(has_text='Upload').first.click()
+        confirm = editor.get_by_role('dialog').filter(has_text='Upload Changes')
+        confirm.wait_for(state='visible', timeout=15000)
+        # "The changed content will override the previous uploaded version and
+        # the current window will be closed. Continue?"
+        confirm.locator('button').filter(has_text='Continue').first.click()
+        if not editor.is_closed():
+            editor.wait_for_event('close', timeout=60000)
+    finally:
+        if not editor.is_closed():
+            editor.close()
+    logger.info("Editor uploaded the new source and closed")
+
+    # Back on the edit page the row re-validates the file: "Validating" until
+    # it reads "Passed". The row already said "Passed" for the old file, so
+    # wait for it to drop into "Validating" first (it may have done so before
+    # the editor tab finished closing). The size shown beside it is not
+    # refreshed until after Publish, so it is no signal either way.
+    try:
+        row.get_by_text('Validating', exact=True).wait_for(state='visible', timeout=10000)
+    except Exception:
+        logger.info("Didn't catch the row in 'Validating' -- checking it reads 'Passed'")
+    try:
+        row.get_by_text('Passed', exact=True).wait_for(state='visible', timeout=UPLOAD_TIMEOUT_MS)
+    except Exception:
+        raise UpdateError(
+            f"The raw file never reached 'Passed' after the editor upload "
+            f"(row says: {row.inner_text()[:200]!r})."
+        )
+    logger.info("Raw file validation passed")
+
+    if need_photos:
+        upload_real_life_photos(page, real_photos)
 
     publish_btn = page.get_by_role('button', name='Publish', exact=True)
     publish_btn.wait_for(state='visible')
-    page.wait_for_timeout(2000)
     publish_btn.click()
-
-    handle_model_data_changed_dialog(page, notify_message)
+    if not handle_model_data_changed_dialog(page, notify_message, timeout_ms=15000):
+        page.wait_for_timeout(3000)
+        raise_on_form_errors(page, 'model edit Publish')
 
 
 def connect_chrome(chrome_user_data_dir: str):
@@ -1075,6 +1210,12 @@ def run_update(args, root_dir: Path):
 
     cfg = load_project_config(model_dir, root_dir)
     files = resolve_upload_files(root_dir, cfg, need_scad=args.scad)
+    real_photos = [Path(p) for p in args.real_photo]
+    if real_photos and not args.scad:
+        raise UpdateError("--real-photo only applies with --scad (it fills the model edit page).")
+    for photo in real_photos:
+        if not photo.exists():
+            raise UpdateError(f"Photo not found: {photo}")
 
     p, page = connect_chrome(args.chrome_user_data_dir)
     try:
@@ -1089,7 +1230,9 @@ def run_update(args, root_dir: Path):
                         "to determine the model id"
                     )
                 model_id = model_id_from_url(cfg['model_url'])
-                update_raw_model_file(page, model_id, files['scad_path'], notify_message)
+                update_raw_model_file(
+                    page, model_id, files['scad_path'], notify_message, real_photos
+                )
                 poll_verification(page, args.username, cfg['verify_name'])
         except Exception:
             debug_path = root_dir / 'dist' / 'makerworld_update_debug.png'
@@ -1271,7 +1414,10 @@ def run_new_model(args, root_dir: Path):
 
     covers = [Path(p) for p in args.cover]
     photos = [Path(p) for p in args.photo]
-    for image in covers + photos:
+    # The print photos already given are real ones, so they double as the Real
+    # life photos unless a separate set is named.
+    real_photos = [Path(p) for p in args.real_photo] or photos
+    for image in covers + photos + real_photos:
         if not image.exists():
             raise UpdateError(f"Image not found: {image}")
 
@@ -1287,6 +1433,7 @@ def run_new_model(args, root_dir: Path):
         "  scad       : %s\n"
         "  covers     : %s\n"
         "  photos     : %s\n"
+        "  real photos: %s\n"
         "  profile    : %s",
         fields['description_path'].relative_to(root_dir),
         fields['model_type'],
@@ -1297,6 +1444,7 @@ def run_new_model(args, root_dir: Path):
         files['scad_path'].relative_to(root_dir) if files.get('scad_path') else '(none)',
         ', '.join(c.name for c in covers) or '(none)',
         ', '.join(p.name for p in photos) or '(none)',
+        ', '.join(p.name for p in real_photos) or '(none)',
         fields['profile_name'] or "(MakerWorld's own auto-fill)",
     )
     if args.dry_run:
@@ -1316,6 +1464,7 @@ def run_new_model(args, root_dir: Path):
             draft_url = create_model(
                 page, fields, files['mf3_path'], files.get('scad_path'),
                 covers, photos, args.private, draft=args.draft,
+                real_photos=real_photos,
             )
             if args.draft:
                 logger.info(
@@ -1386,6 +1535,12 @@ def main():
         help="Geometry changed (or this is cosmetic) but no user notification needed"
     )
     update_parser.add_argument('--scad', action='store_true', help="Also update the raw .scad customizer file")
+    update_parser.add_argument(
+        '--real-photo', action='append', default=[], metavar='PATH',
+        help="Real print photo for the model's 'Real life photos' section (repeatable). "
+             "MakerWorld refuses a model edit with fewer than 3 there, so a listing that "
+             "has none yet needs three, covering 3 views; ignored once it has them."
+    )
 
     new_profile_parser = subparsers.add_parser(
         'new-profile', help="First-time publish of a new print profile onto an existing model"
@@ -1419,6 +1574,11 @@ def main():
     new_model_parser.add_argument(
         '--cover', action='append', default=[], metavar='PATH',
         help="Model Cover image; give it twice for the 4:3 and 3:4 slots separately"
+    )
+    new_model_parser.add_argument(
+        '--real-photo', action='append', default=[], metavar='PATH',
+        help="Real print photo for 'Real life photos' (repeatable, >=3 covering 3 views "
+             "if MakerWorld asks for the section; defaults to the --photo list)"
     )
     new_model_parser.add_argument('--private', action='store_true', help="Publish as Private (default: Public)")
     new_model_parser.add_argument(
