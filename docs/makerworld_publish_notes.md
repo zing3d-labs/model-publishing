@@ -1002,11 +1002,9 @@ model used to rehearse these flows without touching real listings.
 
 1. **Model edit page** — `/en/my/models/{modelId}/edit` → "Raw Model Files".
    Holds the `.scad` customizer source (powers the "Customize" / Parametric
-   Model Maker button). No "replace" — only a delete icon that opens a
-   confirmation dialog; the implied update flow is delete-then-drag-in-new.
-   **Not yet tested**: what happens to the "Customize" button, `designId`, or
-   people's saved customizations when you do this on an already-published,
-   publicly-used model.
+   Model Maker button). Replaced in place through the code editor behind the
+   file's thumbnail; see "Updating the `.scad` raw model file" below. The
+   delete-then-reupload route this used to take stopped working in 2026-11.
 
 2. **Print Profile edit page** — `/en/my/profiles/{profileId}/edit` →
    "Bambu Studio File (Print Profile)". Holds the packed `.3mf` with all
@@ -1064,6 +1062,12 @@ MakerWorld's moderation **rejects synthetic/rendered photos** with reason
 - Model Covers (Web/App 4:3 and 3:4) on the model edit page
 - Model Pictures on the model edit page
 - Print Profile Pictures on the profile edit page
+
+- **Real life photos** on the model edit page (added by MakerWorld by
+  2026-11; at least **3**, "covering 3 views"). Unlike the others this one
+  blocks Publish outright, so any edit to the model page, including a raw
+  `.scad` update, needs it filled first. A listing published before it
+  existed starts at 0 / 16; once filled it keeps them.
 
 All of these need at least one real print photo, not an OpenSCAD render.
 Failing this doesn't block the initial "Publish" click — it fails silently
@@ -1255,11 +1259,51 @@ settle it:
   submodule deliberately — see that dir's `build_config.yaml` header).
 - Build with `python scripts/scad_builder.py model_pages/_test_fixture/build_config.yaml`.
 
-## Updating the `.scad` raw model file (delete + reupload)
+## Updating the `.scad` raw model file (in-place code editor)
 
-Tested end-to-end on the test fixture: delete the old file (confirmation
-dialog), upload the new one, then Publish → same "Model Data Changed?"
-dialog as the `.3mf` flow → async Verifying queue.
+`makerworld_update.py update <model> --scad` does this. The steps, as
+confirmed live on 2026-11-11 (openGrid Inbox, then the test fixture):
+
+1. On `/en/my/models/{modelId}/edit`, find the Raw Model Files row (classed
+   `js-scroll-modelFiles-<unikey>`; its name input holds the file stem).
+2. Click the pencil overlay on the row's thumbnail. It covers the image and
+   swallows pointer events, so hovering the image underneath does nothing.
+   It opens the **Parametric Model Maker in a new tab**
+   (`/en/makerlab/parametricModelMaker?modelName=…&scadUrl=…&unikey=…`).
+3. The source sits in a Monaco editor. The script sets it with
+   `window.monaco.editor.getModels()[0].setValue(src)` and reads it back to
+   check; typing it would be slow and auto-indent would rewrite it.
+4. Click **Upload**. A dialog, "Upload Changes", warns that this overrides
+   the previous version and closes the window. **Continue** closes the tab.
+5. Back on the edit page the row goes "Validating", then "Passed". The
+   size beside it doesn't change until after Publish.
+6. Fill **Real life photos** if it has fewer than 3 (`--real-photo`, given
+   three times; see "Photo requirement"). Publish is refused without them.
+7. **Publish**, then the usual "Model Data Changed?" dialog and the async
+   Verifying queue.
+
+**Checking what is stored.** Don't go by the design API's
+`designExtension.model_files` entry (`/api/v1/design-service/design/{id}`).
+An in-place edit leaves its `modelUpdateTime` and `modelSize` as they were:
+on the test fixture both still read the 2026-08-18 upload after a verified
+edit. Read the file itself instead. Open the editor tab as in step 2, take
+the `scadUrl` query parameter from its URL, fetch that from inside the page,
+and compare it with the built `_cpl.scad`. Close the tab without uploading.
+The stored file changes at step 4, before verification; the listing's
+public data, including `real_pictures`, catches up only once verification
+passes.
+
+**Why not delete + reupload any more.** That was the route until 2026-11:
+delete the raw file, upload the new one through Browse, Publish. On
+2026-11-11 it failed twice on openGrid Inbox. Each time the submit never
+reached the Verifying queue (the script's "UNKNOWN OUTCOME" after 180s),
+and the old file was still served afterwards. The missing Real life photos
+are the likely cause, since they block Publish, but the editor route was
+the one confirmed, so that's what the script uses.
+
+What the delete+reupload route established about the Customize button
+(tested end to end on the test fixture, 2026-08-18) should hold for the
+in-place edit too, which keeps even the file's `unikey`:
 
 Result: **safe**. Confirmed via the live "Customize" button after the
 update cleared verification:
